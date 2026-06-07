@@ -1,0 +1,15 @@
+proxmox_endpoint  = "https://192.168.50.1:8006"
+proxmox_api_token = "root@pam!terraform=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+proxmox_node      = "pve"
+
+vm_id             = 200
+vm_name           = "rtmp-server"
+template_id       = 9000
+
+vm_ip             = "192.168.50.20"
+vm_gateway        = "192.168.50.1"
+storage           = "local-lvm"
+
+records_disk_size = 50
+
+ssh_public_key    = "ssh-ed25519 AAAAC3Nza... william@exemplo"

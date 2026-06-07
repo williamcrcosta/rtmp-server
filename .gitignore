@@ -9,3 +9,10 @@ records/
 hls/
 backups/
 /tmp/
+
+# Terraform
+terraform.tfvars
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
