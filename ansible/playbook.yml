@@ -1,0 +1,55 @@
+---
+- name: Deploy RTMP Server
+  hosts: rtmp_servers
+  become: true
+
+  vars:
+    repo_url: https://github.com/williamcrcosta/rtmp-server.git
+    install_dir: /opt/rtmp-server
+    records_dir: /var/records
+    htpasswd_user: admin
+
+  tasks:
+    - name: Atualizar cache apt
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Instalar dependências
+      apt:
+        name:
+          - docker.io
+          - docker-compose-v2
+          - git
+          - apache2-utils
+        state: present
+
+    - name: Habilitar e iniciar Docker
+      systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Criar diretório de gravações
+      file:
+        path: "{{ records_dir }}"
+        state: directory
+        mode: "0777"
+
+    - name: Clonar ou atualizar repositório
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ install_dir }}"
+        force: true
+
+    - name: Criar htpasswd
+      command: >
+        htpasswd -cb /etc/nginx/.htpasswd {{ htpasswd_user }} {{ htpasswd_password }}
+      no_log: true
+      when: htpasswd_password is defined
+
+    - name: Subir containers com docker compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ install_dir }}/docker"
+        state: present
+        pull: always
