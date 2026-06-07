@@ -11,6 +11,16 @@ provider "proxmox" {
   endpoint  = var.proxmox_endpoint
   api_token = var.proxmox_api_token
   insecure  = true
+  ssh {
+    agent       = false
+    username    = "root"
+    private_key = file("~/.ssh/id_rsa")
+    node {
+      name    = "pve"
+      address = "192.168.50.250"
+      port    = 22
+    }
+  }
 }
 
 resource "proxmox_virtual_environment_file" "cloud_init" {
@@ -46,7 +56,6 @@ resource "proxmox_virtual_environment_vm" "rtmp_server" {
     dedicated = 4096
   }
 
-  # Disco SO
   disk {
     datastore_id = var.storage
     interface    = "scsi0"
@@ -54,7 +63,6 @@ resource "proxmox_virtual_environment_vm" "rtmp_server" {
     discard      = "on"
   }
 
-  # Disco gravações (50GB, 2 dias de retenção)
   disk {
     datastore_id = var.storage
     interface    = "scsi1"
