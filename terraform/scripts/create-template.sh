@@ -1,18 +1,16 @@
 #!/usr/bin/env bash
 # Rodar no shell do Proxmox como root
-# Cria template Ubuntu 24.04 Cloud-Init (VM ID 9000)
+# Cria template Ubuntu 26.04 LTS Cloud-Init (VM ID 9000)
 set -euo pipefail
 
 TEMPLATE_ID=9000
-TEMPLATE_NAME="ubuntu-2404-cloudinit"
+TEMPLATE_NAME="ubuntu-2604-cloudinit"
 STORAGE="local-lvm"   # ajuste para seu storage (ex: local-lvm, ceph, zfs-pool)
-NODE=$(hostname)
+IMAGE_URL="https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-amd64.img"
+IMAGE_FILE="/tmp/ubuntu-26.04-cloud.img"
 
-echo "=== Baixando imagem Ubuntu 24.04 Cloud Image ==="
-cd /tmp
-wget -q --show-progress \
-  https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img \
-  -O ubuntu-24.04-cloud.img
+echo "=== Baixando imagem Ubuntu 26.04 LTS (Resolute Raccoon) ==="
+wget -q --show-progress "${IMAGE_URL}" -O "${IMAGE_FILE}"
 
 echo "=== Criando VM template (ID: ${TEMPLATE_ID}) ==="
 qm create ${TEMPLATE_ID} \
@@ -26,7 +24,7 @@ qm create ${TEMPLATE_ID} \
   --scsihw virtio-scsi-pci
 
 echo "=== Importando disco ==="
-qm importdisk ${TEMPLATE_ID} ubuntu-24.04-cloud.img ${STORAGE}
+qm importdisk ${TEMPLATE_ID} "${IMAGE_FILE}" ${STORAGE}
 
 echo "=== Configurando discos e boot ==="
 qm set ${TEMPLATE_ID} \
