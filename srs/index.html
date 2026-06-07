@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Câmeras</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f0f0f;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #1a1a2e;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #e94560;
+    }
+
+    header h1 {
+      font-size: 1.3rem;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+
+    header h1 span { color: #e94560; }
+
+    #clock {
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(560px, 1fr));
+      gap: 16px;
+      padding: 20px;
+      flex: 1;
+    }
+
+    .cam-card {
+      background: #1a1a1a;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #2a2a2a;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .cam-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: #111;
+    }
+
+    .cam-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #555;
+      transition: background 0.3s;
+    }
+
+    .dot.live { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+    .dot.error { background: #e94560; }
+    .dot.loading { background: #f59e0b; animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .cam-body {
+      position: relative;
+      background: #000;
+      aspect-ratio: 16/9;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #000;
+    }
+
+    .overlay-msg {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.7);
+      font-size: 0.9rem;
+      color: #aaa;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .overlay-msg.hidden { display: none; }
+
+    .overlay-msg svg {
+      width: 40px;
+      height: 40px;
+      stroke: #555;
+    }
+
+    .cam-footer {
+      padding: 8px 14px;
+      display: flex;
+      gap: 10px;
+      background: #111;
+      flex-wrap: wrap;
+    }
+
+    .cam-footer a {
+      font-size: 0.78rem;
+      color: #60a5fa;
+      text-decoration: none;
+      padding: 3px 8px;
+      border: 1px solid #2a4a7a;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    .cam-footer a:hover { background: #1e3a5f; }
+
+    footer {
+      text-align: center;
+      padding: 12px;
+      font-size: 0.75rem;
+      color: #444;
+      border-top: 1px solid #222;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📹 Painel de <span>Câmeras</span></h1>
+  <div id="clock"></div>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<footer>SRS RTMP Server &mdash; <span id="server-ip"></span></footer>
+
+<script>
+  const SERVER = window.location.hostname;
+  const PORT   = '8080';
+  const BASE   = `http://${SERVER}:${PORT}`;
+
+  const CAMERAS = [
+    { id: 'camera1', label: 'Câmera 1' },
+    { id: 'camera2', label: 'Câmera 2' },
+  ];
+
+  document.getElementById('server-ip').textContent = SERVER;
+
+  // Relógio
+  function updateClock() {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleString('pt-BR');
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // Criar cards
+  const grid = document.getElementById('grid');
+
+  CAMERAS.forEach(cam => {
+    const card = document.createElement('div');
+    card.className = 'cam-card';
+    card.innerHTML = `
+      <div class="cam-header">
+        <span class="cam-title">${cam.label}</span>
+        <div class="status">
+          <div class="dot loading" id="dot-${cam.id}"></div>
+          <span id="status-${cam.id}">Conectando...</span>
+        </div>
+      </div>
+      <div class="cam-body">
+        <video id="video-${cam.id}" autoplay muted playsinline controls></video>
+        <div class="overlay-msg" id="overlay-${cam.id}">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0013.5 5.25h-9A2.25 2.25 0 002.25 9.75v7.5A2.25 2.25 0 004.5 18.75z"/>
+            <line x1="3" y1="3" x2="21" y2="21"/>
+          </svg>
+          Aguardando stream...
+        </div>
+      </div>
+      <div class="cam-footer">
+        <a href="${BASE}/live/${cam.id}.m3u8" target="_blank">🔗 HLS</a>
+        <a href="rtmp://${SERVER}:1935/live/${cam.id}" target="_blank">📡 RTMP</a>
+        <a href="${BASE}/players/srs_player.html?app=live&stream=${cam.id}.flv&server=${SERVER}&port=${PORT}&vhost=${SERVER}&schema=http" target="_blank">▶ Player SRS</a>
+      </div>
+    `;
+    grid.appendChild(card);
+
+    loadStream(cam.id);
+  });
+
+  function setStatus(id, state, msg) {
+    const dot = document.getElementById(`dot-${id}`);
+    const lbl = document.getElementById(`status-${id}`);
+    const overlay = document.getElementById(`overlay-${id}`);
+    dot.className = `dot ${state}`;
+    lbl.textContent = msg;
+    overlay.className = state === 'live' ? 'overlay-msg hidden' : 'overlay-msg';
+  }
+
+  function loadStream(id) {
+    const video   = document.getElementById(`video-${id}`);
+    const hlsUrl  = `${BASE}/live/${id}.m3u8`;
+    let retryTimer = null;
+
+    function tryLoad() {
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          liveSyncDurationCount: 3,
+          liveMaxLatencyDurationCount: 6,
+        });
+        hls.loadSource(hlsUrl);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setStatus(id, 'live', 'Ao vivo');
+          video.play().catch(() => {});
+        });
+
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          if (data.fatal) {
+            setStatus(id, 'error', 'Sem sinal');
+            hls.destroy();
+            retryTimer = setTimeout(tryLoad, 5000);
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = hlsUrl;
+        video.addEventListener('loadedmetadata', () => {
+          setStatus(id, 'live', 'Ao vivo');
+          video.play().catch(() => {});
+        });
+      }
+    }
+
+    setStatus(id, 'loading', 'Conectando...');
+    tryLoad();
+  }
+</script>
+</body>
+</html>
