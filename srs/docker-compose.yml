@@ -1,0 +1,24 @@
+services:
+  srs:
+    image: ossrs/srs:5
+    container_name: srs-server
+    restart: unless-stopped
+    ports:
+      - "1935:1935"   # RTMP ingest
+      - "8080:8080"   # HTTP dashboard + HLS
+      - "1985:1985"   # API REST
+      - "8000:8000/udp" # WebRTC (opcional)
+    volumes:
+      - ./srs.conf:/usr/local/srs/conf/srs.conf:ro
+      - records:/var/records
+    environment:
+      - CANDIDATE=${SERVER_IP:-127.0.0.1}  # IP para WebRTC
+    command: ./objs/srs -c conf/srs.conf
+
+volumes:
+  records:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${RECORDS_PATH:-/var/records}
