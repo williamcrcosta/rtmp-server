@@ -7,154 +7,57 @@
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0f0f0f; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
 
-    body {
-      background: #0f0f0f;
-      color: #e0e0e0;
-      font-family: 'Segoe UI', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    header {
-      background: #1a1a2e;
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 2px solid #e94560;
-    }
-
-    header h1 {
-      font-size: 1.3rem;
-      color: #fff;
-      letter-spacing: 1px;
-    }
-
+    header { background: #1a1a2e; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e94560; }
+    header h1 { font-size: 1.3rem; color: #fff; letter-spacing: 1px; }
     header h1 span { color: #e94560; }
+    #clock { font-size: 0.9rem; color: #aaa; }
 
-    #clock {
-      font-size: 0.9rem;
-      color: #aaa;
+    /* Stats bar */
+    .stats-bar {
+      display: flex; gap: 12px; padding: 12px 20px; background: #111;
+      border-bottom: 1px solid #222; flex-wrap: wrap;
     }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(560px, 1fr));
-      gap: 16px;
-      padding: 20px;
-      flex: 1;
+    .stat-card {
+      background: #1a1a2e; border-radius: 8px; padding: 10px 18px;
+      display: flex; flex-direction: column; gap: 2px; min-width: 130px;
+      border: 1px solid #2a2a4a;
     }
+    .stat-card .label { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+    .stat-card .value { font-size: 1.2rem; font-weight: 700; color: #60a5fa; }
+    .stat-card .value.green { color: #22c55e; }
+    .stat-card .value.yellow { color: #f59e0b; }
 
-    .cam-card {
-      background: #1a1a1a;
-      border-radius: 10px;
-      overflow: hidden;
-      border: 1px solid #2a2a2a;
-      display: flex;
-      flex-direction: column;
-    }
+    /* Camera grid */
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(540px, 1fr)); gap: 16px; padding: 20px; flex: 1; }
 
-    .cam-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 14px;
-      background: #111;
-    }
-
-    .cam-title {
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
-
-    .status {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.8rem;
-    }
-
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #555;
-      transition: background 0.3s;
-    }
-
+    .cam-card { background: #1a1a1a; border-radius: 10px; overflow: hidden; border: 1px solid #2a2a2a; display: flex; flex-direction: column; }
+    .cam-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #111; }
+    .cam-title { font-weight: 600; font-size: 0.95rem; }
+    .status { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; transition: background 0.3s; }
     .dot.live { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
     .dot.error { background: #e94560; }
     .dot.loading { background: #f59e0b; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    .cam-body {
-      position: relative;
-      background: #000;
-      aspect-ratio: 16/9;
-    }
-
-    video {
-      width: 100%;
-      height: 100%;
-      display: block;
-      background: #000;
-    }
-
-    .overlay-msg {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.7);
-      font-size: 0.9rem;
-      color: #aaa;
-      gap: 8px;
-      pointer-events: none;
-    }
-
+    .cam-body { position: relative; background: #000; aspect-ratio: 16/9; }
+    video { width: 100%; height: 100%; display: block; background: #000; }
+    .overlay-msg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.75); font-size: 0.9rem; color: #aaa; gap: 8px; }
     .overlay-msg.hidden { display: none; }
+    .overlay-msg svg { width: 40px; height: 40px; stroke: #555; }
 
-    .overlay-msg svg {
-      width: 40px;
-      height: 40px;
-      stroke: #555;
-    }
+    /* Stream stats per cam */
+    .cam-stats { display: flex; gap: 8px; padding: 8px 14px; background: #0d0d0d; flex-wrap: wrap; }
+    .cam-stat { font-size: 0.75rem; color: #888; }
+    .cam-stat span { color: #ccc; font-weight: 600; }
 
-    .cam-footer {
-      padding: 8px 14px;
-      display: flex;
-      gap: 10px;
-      background: #111;
-      flex-wrap: wrap;
-    }
-
-    .cam-footer a {
-      font-size: 0.78rem;
-      color: #60a5fa;
-      text-decoration: none;
-      padding: 3px 8px;
-      border: 1px solid #2a4a7a;
-      border-radius: 4px;
-      transition: background 0.2s;
-    }
-
+    .cam-footer { padding: 8px 14px; display: flex; gap: 10px; background: #111; flex-wrap: wrap; }
+    .cam-footer a { font-size: 0.78rem; color: #60a5fa; text-decoration: none; padding: 3px 8px; border: 1px solid #2a4a7a; border-radius: 4px; transition: background 0.2s; }
     .cam-footer a:hover { background: #1e3a5f; }
 
-    footer {
-      text-align: center;
-      padding: 12px;
-      font-size: 0.75rem;
-      color: #444;
-      border-top: 1px solid #222;
-    }
+    footer { text-align: center; padding: 12px; font-size: 0.75rem; color: #444; border-top: 1px solid #222; }
   </style>
 </head>
 <body>
@@ -164,14 +67,43 @@
   <div id="clock"></div>
 </header>
 
+<!-- Stats bar global -->
+<div class="stats-bar">
+  <div class="stat-card">
+    <div class="label">Streams ativos</div>
+    <div class="value green" id="stat-streams">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Clientes conectados</div>
+    <div class="value" id="stat-clients">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Recv total</div>
+    <div class="value yellow" id="stat-recv">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Send total</div>
+    <div class="value" id="stat-send">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">CPU SRS</div>
+    <div class="value" id="stat-cpu">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Memória SRS</div>
+    <div class="value" id="stat-mem">--</div>
+  </div>
+</div>
+
 <div class="grid" id="grid"></div>
 
-<footer>SRS RTMP Server &mdash; <span id="server-ip"></span></footer>
+<footer>SRS RTMP Server &mdash; <span id="server-ip"></span> &mdash; API atualiza a cada 5s</footer>
 
 <script>
-  const SERVER = window.location.hostname;
-  const PORT   = '8080';
-  const BASE   = `http://${SERVER}:${PORT}`;
+  const SERVER  = window.location.hostname;
+  const PORT    = '8080';
+  const API     = `http://${SERVER}:1985`;
+  const BASE    = `http://${SERVER}:${PORT}`;
 
   const CAMERAS = [
     { id: 'camera1', label: 'Câmera 1' },
@@ -181,16 +113,13 @@
   document.getElementById('server-ip').textContent = SERVER;
 
   // Relógio
-  function updateClock() {
-    document.getElementById('clock').textContent =
-      new Date().toLocaleString('pt-BR');
-  }
-  updateClock();
-  setInterval(updateClock, 1000);
+  setInterval(() => {
+    document.getElementById('clock').textContent = new Date().toLocaleString('pt-BR');
+  }, 1000);
+  document.getElementById('clock').textContent = new Date().toLocaleString('pt-BR');
 
   // Criar cards
   const grid = document.getElementById('grid');
-
   CAMERAS.forEach(cam => {
     const card = document.createElement('div');
     card.className = 'cam-card';
@@ -212,64 +141,98 @@
           Aguardando stream...
         </div>
       </div>
+      <div class="cam-stats" id="camstats-${cam.id}">
+        <div class="cam-stat">Recv: <span id="cs-recv-${cam.id}">--</span></div>
+        <div class="cam-stat">Send: <span id="cs-send-${cam.id}">--</span></div>
+        <div class="cam-stat">Video: <span id="cs-video-${cam.id}">--</span></div>
+        <div class="cam-stat">Clientes: <span id="cs-clients-${cam.id}">--</span></div>
+      </div>
       <div class="cam-footer">
         <a href="${BASE}/live/${cam.id}.m3u8" target="_blank">🔗 HLS</a>
         <a href="rtmp://${SERVER}:1935/live/${cam.id}" target="_blank">📡 RTMP</a>
         <a href="${BASE}/players/srs_player.html?app=live&stream=${cam.id}.flv&server=${SERVER}&port=${PORT}&vhost=${SERVER}&schema=http" target="_blank">▶ Player SRS</a>
+        <a href="${API}/api/v1/streams" target="_blank">📊 API</a>
       </div>
     `;
     grid.appendChild(card);
-
     loadStream(cam.id);
   });
 
   function setStatus(id, state, msg) {
-    const dot = document.getElementById(`dot-${id}`);
-    const lbl = document.getElementById(`status-${id}`);
-    const overlay = document.getElementById(`overlay-${id}`);
-    dot.className = `dot ${state}`;
-    lbl.textContent = msg;
-    overlay.className = state === 'live' ? 'overlay-msg hidden' : 'overlay-msg';
+    document.getElementById(`dot-${id}`).className = `dot ${state}`;
+    document.getElementById(`status-${id}`).textContent = msg;
+    const ov = document.getElementById(`overlay-${id}`);
+    ov.className = state === 'live' ? 'overlay-msg hidden' : 'overlay-msg';
   }
 
   function loadStream(id) {
-    const video   = document.getElementById(`video-${id}`);
-    const hlsUrl  = `${BASE}/live/${id}.m3u8`;
-    let retryTimer = null;
+    const video  = document.getElementById(`video-${id}`);
+    const hlsUrl = `${BASE}/live/${id}.m3u8`;
 
     function tryLoad() {
       if (Hls.isSupported()) {
-        const hls = new Hls({
-          liveSyncDurationCount: 3,
-          liveMaxLatencyDurationCount: 6,
-        });
+        const hls = new Hls({ liveSyncDurationCount: 3, liveMaxLatencyDurationCount: 6 });
         hls.loadSource(hlsUrl);
         hls.attachMedia(video);
-
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          setStatus(id, 'live', 'Ao vivo');
-          video.play().catch(() => {});
-        });
-
-        hls.on(Hls.Events.ERROR, (_, data) => {
-          if (data.fatal) {
-            setStatus(id, 'error', 'Sem sinal');
-            hls.destroy();
-            retryTimer = setTimeout(tryLoad, 5000);
-          }
+        hls.on(Hls.Events.MANIFEST_PARSED, () => { setStatus(id, 'live', 'Ao vivo'); video.play().catch(()=>{}); });
+        hls.on(Hls.Events.ERROR, (_, d) => {
+          if (d.fatal) { setStatus(id, 'error', 'Sem sinal'); hls.destroy(); setTimeout(tryLoad, 5000); }
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = hlsUrl;
-        video.addEventListener('loadedmetadata', () => {
-          setStatus(id, 'live', 'Ao vivo');
-          video.play().catch(() => {});
-        });
+        video.addEventListener('loadedmetadata', () => { setStatus(id, 'live', 'Ao vivo'); video.play().catch(()=>{}); });
       }
     }
-
     setStatus(id, 'loading', 'Conectando...');
     tryLoad();
   }
+
+  // Estatísticas via API SRS
+  function kbps(v) { return v ? `${(v/1000).toFixed(0)} Kbps` : '0 Kbps'; }
+
+  async function fetchStats() {
+    try {
+      const [sRes, sumRes] = await Promise.all([
+        fetch(`${API}/api/v1/streams`),
+        fetch(`${API}/api/v1/summaries`)
+      ]);
+      const sData   = await sRes.json();
+      const sumData = await sumRes.json();
+
+      const streams = sData.streams || [];
+      let totalRecv = 0, totalSend = 0, totalClients = 0;
+
+      streams.forEach(s => {
+        totalRecv    += s.kbps?.recv_30s || 0;
+        totalSend    += s.kbps?.send_30s || 0;
+        totalClients += s.clients || 0;
+
+        const name = s.name;
+        if (document.getElementById(`cs-recv-${name}`)) {
+          document.getElementById(`cs-recv-${name}`).textContent  = kbps(s.kbps?.recv_30s);
+          document.getElementById(`cs-send-${name}`).textContent  = kbps(s.kbps?.send_30s);
+          document.getElementById(`cs-video-${name}`).textContent = s.video ? `${s.video.codec} ${s.video.width}x${s.video.height}` : '--';
+          document.getElementById(`cs-clients-${name}`).textContent = s.clients || 0;
+        }
+      });
+
+      document.getElementById('stat-streams').textContent  = streams.length;
+      document.getElementById('stat-clients').textContent  = totalClients;
+      document.getElementById('stat-recv').textContent     = kbps(totalRecv);
+      document.getElementById('stat-send').textContent     = kbps(totalSend);
+
+      const self = sumData.data?.self;
+      if (self) {
+        document.getElementById('stat-cpu').textContent = `${self.cpu_percent?.toFixed(1) || '--'}%`;
+        document.getElementById('stat-mem').textContent = self.mem_kbyte ? `${(self.mem_kbyte/1024).toFixed(0)} MB` : '--';
+      }
+    } catch(e) {
+      document.getElementById('stat-streams').textContent = '!';
+    }
+  }
+
+  fetchStats();
+  setInterval(fetchStats, 5000);
 </script>
 </body>
 </html>
