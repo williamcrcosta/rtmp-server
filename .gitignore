@@ -1,0 +1,11 @@
+*.flv
+*.ts
+*.m3u8
+*.m3u8.bak
+.htpasswd
+.env
+.env.*
+records/
+hls/
+backups/
+/tmp/
