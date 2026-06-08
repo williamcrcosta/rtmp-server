@@ -75,7 +75,8 @@ echo ""
 pct exec "$CT_ID" -- bash -c "
 htpasswd -cb /etc/nginx/.htpasswd admin '$HTPASSWD_PASS'
 git clone $REPO /opt/rtmp-server
-cd /opt/rtmp-server/srs && RECORDS_PATH=$RECORDS_PATH docker compose up -d
+cp -r /opt/rtmp-server/srs /opt/srs
+cd /opt/srs && RECORDS_PATH=$RECORDS_PATH docker compose up -d
 
 cat > /etc/systemd/system/srs-stack.service <<EOF
 [Unit]
@@ -84,7 +85,7 @@ After=docker.service network-online.target
 Requires=docker.service
 
 [Service]
-WorkingDirectory=/opt/rtmp-server/srs
+WorkingDirectory=/opt/srs
 Environment=RECORDS_PATH=$RECORDS_PATH
 ExecStart=/usr/bin/docker compose up
 ExecStop=/usr/bin/docker compose down
