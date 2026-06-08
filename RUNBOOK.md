@@ -248,3 +248,15 @@ nc -zv localhost 1935 2>&1 | grep -o 'succeeded\|failed' | xargs echo 'RTMP 1935
 | Jun/2026 | Migração para Docker nginx-rtmp (`docker/`) |
 | Jun/2026 | Migração para SRS em VM via Terraform (`192.168.50.150`) |
 | Jun/2026 | Migração para SRS em LXC Ubuntu 26.04 (`192.168.50.151`) — **atual** |
+
+---
+
+## Nota: srs-stack.service autostart
+
+O serviço systemd `srs-stack.service` foi configurado com `Type=oneshot` + `RemainAfterExit=yes` e sobe os containers via `docker compose up -d` no boot.
+
+> ⚠️ O `WorkingDirectory` deve ser `/opt/srs`. Se o serviço falhar com `CHDIR: No such file or directory`:
+> ```bash
+> pct exec 201 -- sed -i 's|WorkingDirectory=.*|WorkingDirectory=/opt/srs|' /etc/systemd/system/srs-stack.service
+> pct exec 201 -- systemctl daemon-reload && systemctl restart srs-stack
+> ```
