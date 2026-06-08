@@ -135,3 +135,71 @@ Nunca versionar:
 - `.env`
 - Gravações `.flv`
 - Segmentos HLS `.ts` / `.m3u8`
+
+---
+
+## Evolução do projeto
+
+| Versão | Data | Onde roda | Descrição |
+|---|---|---|---|
+| **v1** | Jun/2026 | VM `192.168.50.12` | Nginx + RTMP module bare metal — config em `nginx/` e `systemd/` |
+| **v2** | Jun/2026 | Qualquer host Docker | Container `tiangolo/nginx-rtmp` — config em `docker/` |
+| **v3** | Jun/2026 | VM `192.168.50.150` | SRS em VM via Terraform + Cloud-Init — config em `terraform/` e `srs/` |
+| **v4** | Jun/2026 | LXC `192.168.50.151` | SRS + Nginx proxy + Basic Auth em Proxmox LXC Ubuntu 26.04 |
+| **v5** ✅ atual | Jun/2026 | LXC `192.168.50.151` | SRS + Caddy HTTPS automático via Smallstep CA próprio (`wcrpc.lan`) |
+
+Toda configuração de cada versão está preservada nas pastas correspondentes.
+
+---
+
+## Arquitetura atual (v5 — SRS + Caddy + step-ca)
+
+```
+App Mibo / OBS / FFmpeg / Câmera IP
+              │
+              │  RTMP  rtmp://192.168.50.151:1935/live/camera1
+              ▼
+     ┌─────────────────┐
+     │   SRS Server    │  interno: 8080 / 1985
+     │  ossrs/srs:5    │
+     └────────┬────────┘
+              │
+     ┌────────▼────────┐
+     │  Caddy Proxy    │  :80 redirect / :443 HTTPS + Basic Auth
+     │  caddy:alpine   │  cert ACME ← step-ca (wcrpc.lan CA)
+     └────────┬────────┘
+              │
+     ┌────────▼────────┐     ┌────────────────────┐
+     │    Browser      │     │  step-ca (CT 101)   │
+     │  /cameras.html  │     │  192.168.50.14:9000 │
+     └─────────────────┘     │  CA wcrpc.lan       │
+                             └────────────────────┘
+Gravações → /var/records
+```
+
+## URLs atuais (v5)
+
+| Serviço | URL | Auth |
+|---|---|---|
+| **Painel câmeras** | `https://cameras.wcrpc.lan/cameras.html` | ✅ |
+| **Dashboard SRS** | `https://cameras.wcrpc.lan/` | ✅ |
+| **HLS** | `https://cameras.wcrpc.lan/live/cameraN.m3u8` | ✅ |
+| **API stats** | `https://cameras.wcrpc.lan/api/v1/streams/` | ✅ |
+| **RTMP ingest** | `rtmp://192.168.50.151:1935/live/cameraN` | ❌ aberto |
+
+## Infraestrutura atual
+
+| Componente | VMID | IP | Função |
+|---|---|---|---|
+| Proxmox host | — | `192.168.50.250` | Hypervisor |
+| **rtmp-lxc** | CT 201 | `192.168.50.151` | Servidor RTMP (SRS + Caddy) |
+| **ca-server** | CT 101 | `192.168.50.14` | Smallstep CA — certs `wcrpc.lan` (3 meses) |
+| Template Cloud-Init | VM 9000 | — | Base para Terraform (manter) |
+
+## Trocar senha (v5)
+
+```bash
+HASH=$(pct exec 201 -- docker run --rm caddy:alpine caddy hash-password --plaintext 'SUASENHA')
+pct exec 201 -- sed -i "s|admin .*|admin $HASH|" /opt/srs/Caddyfile
+pct exec 201 -- docker exec rtmp-caddy caddy reload --config /etc/caddy/Caddyfile
+```
