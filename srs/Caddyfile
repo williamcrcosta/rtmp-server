@@ -1,0 +1,18 @@
+{
+    acme_ca https://192.168.50.14/acme/acme/directory
+    acme_ca_root /etc/ssl/certs/ca-certificates.crt
+}
+
+cameras.wcrpc.lan {
+    basicauth {
+        admin $2a$14$04U5k9MwKEOny85PxAWAReSWKbnHyx6xT8KDiEv.I86LkEDaQ6rdm
+    }
+
+    reverse_proxy /api/* srs:1985
+
+    reverse_proxy srs:8080 {
+        header_up Host {host}
+        header_down Cache-Control no-cache
+        header_down Access-Control-Allow-Origin *
+    }
+}
