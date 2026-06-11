@@ -265,3 +265,32 @@ pct exec 201 -- docker ps
 | **CT 103** (adguard-home) | Não utilizado, estava parado | **~58 GB** |
 
 > Nota: Container AdGuard Home foi removido após análise de utilização. Não havia dados relevantes.
+
+---
+
+## 📊 Monitoramento Netdata (11 Jun 2026)
+
+Dashboard de monitoramento instalado no host Proxmox.
+
+**Acesso:** `http://192.168.50.250:19999`
+
+### O que monitora:
+- 🖥️ **Host Proxmox:** CPU, RAM, disco, rede, temperatura
+- 🐳 **Containers LXC:** CT 101 (ca-server), CT 201 (rtmp-lxc)
+- 💻 **VMs:** VM 200 (win10-test) e outras
+- 📈 **Processos:** Uso em tempo real
+- 🔔 **Alertas:** Configuráveis (Discord, Telegram, Email)
+
+### Comandos úteis:
+```bash
+# Status do serviço
+systemctl status netdata
+
+# Restart
+systemctl restart netdata
+
+# Ver logs
+journalctl -u netdata -f
+```
+
+> Instalado via script oficial: https://my-netdata.io/
