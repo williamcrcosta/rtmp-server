@@ -240,3 +240,18 @@ pct exec 201 -- docker ps
 | **CT 201** (rtmp-lxc) | 512 MB RAM | **384 MB RAM** | ~140 MB | 128 MB |
 
 **Total economizado:** 384 MB de RAM no host Proxmox
+
+---
+
+## 🎯 Otimizações de CPU e RAM (11 Jun 2026)
+
+| Container | CPU Antes | CPU Depois | RAM Antes | RAM Depois | Economia |
+|---|---|---|---|---|---|
+| **CT 101** (ca-server) | 1 core | 1 core | 512 MB | **256 MB** | 256 MB |
+| **CT 201** (rtmp-lxc) | 2 cores | **1 core** | 512 MB | **384 MB** | 1 core + 128 MB |
+
+**Total economizado no host Proxmox:**
+- 🧠 **RAM:** 384 MB liberados
+- ⚡ **CPU:** 1 core liberado
+
+> ✅ Serviços continuam 100% funcionais com margem de segurança
