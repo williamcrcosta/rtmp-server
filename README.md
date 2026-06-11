@@ -255,3 +255,13 @@ pct exec 201 -- docker ps
 - ⚡ **CPU:** 1 core liberado
 
 > ✅ Serviços continuam 100% funcionais com margem de segurança
+
+---
+
+## 🗑️ Exclusões (11 Jun 2026)
+
+| Item | Motivo | Espaço Liberado |
+|---|---|---|
+| **CT 103** (adguard-home) | Não utilizado, estava parado | **~58 GB** |
+
+> Nota: Container AdGuard Home foi removido após análise de utilização. Não havia dados relevantes.
