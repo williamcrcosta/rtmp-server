@@ -20,7 +20,7 @@ TEMPLATE="ubuntu-26.04-standard_26.04-1_amd64.tar.zst"
 REPO="https://github.com/williamcrcosta/rtmp-server.git"
 RECORDS_PATH="/var/records"
 DOMAIN="cameras.wcrpc.lan"
-CA_IP="192.168.50.14"
+CA_IP="192.168.50.19"
 CA_PORT="9000"
 # ─────────────────────────────────────────────────────────────────────────────
 

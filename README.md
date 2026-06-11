@@ -171,7 +171,7 @@ App Mibo / OBS / FFmpeg / Câmera IP
               │
      ┌────────▼────────┐     ┌────────────────────┐
      │    Browser      │     │  step-ca (CT 101)   │
-     │  /cameras.html  │     │  192.168.50.14:9000 │
+     │  /cameras.html  │     │  192.168.50.19:9000 │
      └─────────────────┘     │  CA wcrpc.lan       │
                              └────────────────────┘
 Gravações → /var/records
@@ -193,7 +193,7 @@ Gravações → /var/records
 |---|---|---|---|
 | Proxmox host | — | `192.168.50.250` | Hypervisor |
 | **rtmp-lxc** | CT 201 | `192.168.50.151` | Servidor RTMP (SRS + Caddy) |
-| **ca-server** | CT 101 | `192.168.50.14` | Smallstep CA — certs `wcrpc.lan` (3 meses) |
+| **ca-server** | CT 101 | `192.168.50.19` | Smallstep CA — certs `wcrpc.lan` (3 meses) |
 | Template Cloud-Init | VM 9000 | — | Base para Terraform (manter) |
 
 ## Trocar senha (v5)

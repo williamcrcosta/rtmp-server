@@ -1,5 +1,5 @@
 {
-    acme_ca https://192.168.50.14/acme/acme/directory
+    acme_ca https://192.168.50.19/acme/acme/directory
     acme_ca_root /etc/ssl/certs/ca-certificates.crt
 }
 
