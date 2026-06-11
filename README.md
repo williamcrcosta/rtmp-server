@@ -229,3 +229,14 @@ pct list && qm list
 pct exec 101 -- systemctl status step-ca --no-pager
 pct exec 201 -- docker ps
 ```
+
+---
+
+## ⚡ Otimizações de Recursos (11 Jun 2026)
+
+| Container | Antes | Depois | Uso Real | Economia |
+|---|---|---|---|---|
+| **CT 101** (ca-server) | 512 MB RAM | **256 MB RAM** | ~30 MB | 256 MB |
+| **CT 201** (rtmp-lxc) | 512 MB RAM | **384 MB RAM** | ~140 MB | 128 MB |
+
+**Total economizado:** 384 MB de RAM no host Proxmox
