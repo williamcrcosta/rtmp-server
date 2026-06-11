@@ -203,3 +203,29 @@ HASH=$(pct exec 201 -- docker run --rm caddy:alpine caddy hash-password --plaint
 pct exec 201 -- sed -i "s|admin .*|admin $HASH|" /opt/srs/Caddyfile
 pct exec 201 -- docker exec rtmp-caddy caddy reload --config /etc/caddy/Caddyfile
 ```
+
+---
+
+## 📝 Evoluções Recentes (Jun/2026)
+
+| Data | Melhoria | Detalhes |
+|---|---|---|
+| 11 Jun | **🔧 Correção IP CA** | IP do `ca-server` corrigido de `192.168.50.14` → `192.168.50.19` (CT 101 mudou de IP) |
+| 11 Jun | **⚡ Otimização Recursos** | CT 101 reduzido de 512 MB → **256 MB RAM** (uso real ~30 MB) |
+| 11 Jun | **🔑 Script Troca Senha** | Criado `~/trocar-senha-cameras.sh` para trocar senha do painel interativamente |
+| 11 Jun | **🖥️ VM Windows Teste** | Criada VM 200 (`win10-test`) com 8 GB RAM para testes em Proxmox |
+| 11 Jun | **📊 Infra Dashboard** | Portal `https://cameras.wcrpc.lan` 100% funcional com HTTPS + autenticação |
+
+### Scripts Úteis Criados
+
+**Trocar senha do painel:**
+```bash
+bash ~/trocar-senha-cameras.sh
+```
+
+**Verificar status dos serviços:**
+```bash
+pct list && qm list
+pct exec 101 -- systemctl status step-ca --no-pager
+pct exec 201 -- docker ps
+```
