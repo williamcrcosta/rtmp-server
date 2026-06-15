@@ -315,3 +315,30 @@ systemctl restart systemd-logind
 ```
 
 > ⚠️ Com a tampa fechada, garantir boa ventilação para evitar superaquecimento.
+
+---
+
+## 💿 ISOs e Templates Armazenados
+
+**Local:** `/var/lib/vz/template/iso/`
+
+| Arquivo | Tamanho | Uso |
+|---|---|---|
+| `ubuntu-26.04-live-server-amd64.iso` | 2.8 GB | Instalação Ubuntu Server (VMs 100) |
+| `ubuntu-26.04-desktop-amd64.iso` | 6.1 GB | Instalação Ubuntu Desktop (VM 102) |
+| `Windows_10_AIO_1903_64_Bits__2019.iso` | 4.7 GB | Instalação Windows 10 (VM 200) |
+| `virtio-win.iso` | 754 MB | Drivers VirtIO para Windows |
+| `nginx-rtmp-cameras-disk1.vmdk` | 18 GB | OVA antiga (pode remover) |
+| `nginx-rtmp-cameras-file1.iso` | 2.6 GB | OVA antiga (pode remover) |
+| `nginx-rtmp-cameras.ovf` | 15 KB | OVA antiga (pode remover) |
+| `nginx-rtmp-cameras.mf` | 409 B | OVA antiga (pode remover) |
+
+**Total ocupado:** ~34 GB
+
+### 🧹 Limpeza possível:
+```bash
+# Remover arquivos OVA antigos (~21 GB)
+rm -f /var/lib/vz/template/iso/nginx-rtmp-cameras*
+```
+
+> ⚠️ Os arquivos `nginx-rtmp-cameras*` são de uma exportação OVA antiga. Podem ser removidos se não forem mais necessários.
