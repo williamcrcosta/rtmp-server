@@ -294,3 +294,24 @@ journalctl -u netdata -f
 ```
 
 > Instalado via script oficial: https://my-netdata.io/
+
+---
+
+## 🔌 Configuração Power Management (11 Jun 2026)
+
+Configuração para manter o Proxmox ligado ao fechar a tampa do notebook.
+
+**Arquivo:** `/etc/systemd/logind.conf`
+
+```ini
+HandleLidSwitch=ignore
+HandleLidSwitchExternalPower=ignore
+HandleLidSwitchDocked=ignore
+```
+
+**Aplicar alterações:**
+```bash
+systemctl restart systemd-logind
+```
+
+> ⚠️ Com a tampa fechada, garantir boa ventilação para evitar superaquecimento.
