@@ -146,13 +146,14 @@ Nunca versionar:
 | **v2** | Jun/2026 | Qualquer host Docker | Container `tiangolo/nginx-rtmp` — config em `docker/` |
 | **v3** | Jun/2026 | VM `192.168.50.150` | SRS em VM via Terraform + Cloud-Init — config em `terraform/` e `srs/` |
 | **v4** | Jun/2026 | LXC `192.168.50.151` | SRS + Nginx proxy + Basic Auth em Proxmox LXC Ubuntu 26.04 |
-| **v5** ✅ atual | Jun/2026 | LXC `192.168.50.151` | SRS + Caddy HTTPS automático via Smallstep CA próprio (`wcrpc.lan`) |
+| **v5** | Jun/2026 | LXC `192.168.50.151` | SRS + Caddy HTTPS automático via Smallstep CA próprio (`wcrpc.lan`) |
+| **v6** ✅ atual | Ago/2026 | LXC `192.168.50.151` | SRS + Caddy HTTPS com certificado público Let's Encrypt (`wccosta.com.br`) |
 
 Toda configuração de cada versão está preservada nas pastas correspondentes.
 
 ---
 
-## Arquitetura atual (v5 — SRS + Caddy + step-ca)
+## Arquitetura atual (v6 — SRS + Caddy + Let's Encrypt)
 
 ```
 App Mibo / OBS / FFmpeg / Câmera IP
@@ -166,25 +167,25 @@ App Mibo / OBS / FFmpeg / Câmera IP
               │
      ┌────────▼────────┐
      │  Caddy Proxy    │  :80 redirect / :443 HTTPS + Basic Auth
-     │  caddy:alpine   │  cert ACME ← step-ca (wcrpc.lan CA)
+     │  caddy:alpine   │  cert manual Let's Encrypt (wccosta.com.br)
      └────────┬────────┘
               │
      ┌────────▼────────┐     ┌────────────────────┐
      │    Browser      │     │  step-ca (CT 101)   │
      │  /cameras.html  │     │  192.168.50.19:9000 │
-     └─────────────────┘     │  CA wcrpc.lan       │
+     └─────────────────┘     │  Let's Encrypt + Azure DNS       │
                              └────────────────────┘
 Gravações → /var/records
 ```
 
-## URLs atuais (v5)
+## URLs atuais (v6)
 
 | Serviço | URL | Auth |
 |---|---|---|
-| **Painel câmeras** | `https://cameras.wcrpc.lan/cameras.html` | ✅ |
-| **Dashboard SRS** | `https://cameras.wcrpc.lan/` | ✅ |
-| **HLS** | `https://cameras.wcrpc.lan/live/cameraN.m3u8` | ✅ |
-| **API stats** | `https://cameras.wcrpc.lan/api/v1/streams/` | ✅ |
+| **Painel câmeras** | `https://cameras.wccosta.com.br/cameras.html` | ✅ |
+| **Dashboard SRS** | `https://cameras.wccosta.com.br/` | ✅ |
+| **HLS** | `https://cameras.wccosta.com.br/live/cameraN.m3u8` | ✅ |
+| **API stats** | `https://cameras.wccosta.com.br/api/v1/streams/` | ✅ |
 | **RTMP ingest** | `rtmp://192.168.50.151:1935/live/cameraN` | ❌ aberto |
 
 ## Infraestrutura atual
@@ -193,10 +194,11 @@ Gravações → /var/records
 |---|---|---|---|
 | Proxmox host | — | `192.168.50.250` | Hypervisor |
 | **rtmp-lxc** | CT 201 | `192.168.50.151` | Servidor RTMP (SRS + Caddy) |
-| **ca-server** | CT 101 | `192.168.50.19` | Smallstep CA — certs `wcrpc.lan` (3 meses) |
+| **ca-server** | CT 101 | `192.168.50.19` | Smallstep CA — certs `wcrpc.lan` (legado) |
+| **certbot-az** | CT 101 | `192.168.50.19` | Emissão de certificados Let's Encrypt via Azure DNS |
 | Template Cloud-Init | VM 9000 | — | Base para Terraform (manter) |
 
-## Trocar senha (v5)
+## Trocar senha (v6)
 
 ```bash
 HASH=$(pct exec 201 -- docker run --rm caddy:alpine caddy hash-password --plaintext 'SUASENHA')
@@ -206,7 +208,7 @@ pct exec 201 -- docker exec rtmp-caddy caddy reload --config /etc/caddy/Caddyfil
 
 ---
 
-## 📝 Evoluções Recentes (Jun/2026)
+## 📝 Evoluções Recentes
 
 | Data | Melhoria | Detalhes |
 |---|---|---|
@@ -214,7 +216,7 @@ pct exec 201 -- docker exec rtmp-caddy caddy reload --config /etc/caddy/Caddyfil
 | 11 Jun | **⚡ Otimização Recursos** | CT 101 reduzido de 512 MB → **256 MB RAM** (uso real ~30 MB) |
 | 11 Jun | **🔑 Script Troca Senha** | Criado `~/trocar-senha-cameras.sh` para trocar senha do painel interativamente |
 | 11 Jun | **🖥️ VM Windows Teste** | Criada VM 200 (`win10-test`) com 8 GB RAM para testes em Proxmox |
-| 11 Jun | **📊 Infra Dashboard** | Portal `https://cameras.wcrpc.lan` 100% funcional com HTTPS + autenticação |
+| 11 Jun | **📊 Infra Dashboard** | Portal `https://cameras.wccosta.com.br` 100% funcional com HTTPS + autenticação |
 
 ### Scripts Úteis Criados
 

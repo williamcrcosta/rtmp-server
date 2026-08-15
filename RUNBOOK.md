@@ -37,12 +37,14 @@ ssh root@192.168.50.151
 
 | Serviço | URL | Auth |
 |---|---|---|
-| Painel câmeras | `http://192.168.50.151:8888/cameras.html` | ✅ admin + senha |
-| Dashboard SRS | `http://192.168.50.151:8888/` | ✅ admin + senha |
-| HLS camera1 | `http://192.168.50.151:8888/live/camera1.m3u8` | ✅ |
-| HLS camera2 | `http://192.168.50.151:8888/live/camera2.m3u8` | ✅ |
-| API stats | `http://192.168.50.151:8888/api/v1/streams/` | ✅ |
+| Painel câmeras | `https://cameras.wccosta.com.br/cameras.html` | ✅ admin + senha |
+| Dashboard SRS | `https://cameras.wccosta.com.br/` | ✅ admin + senha |
+| HLS camera1 | `https://cameras.wccosta.com.br/live/camera1.m3u8` | ✅ |
+| HLS camera2 | `https://cameras.wccosta.com.br/live/camera2.m3u8` | ✅ |
+| API stats | `https://cameras.wccosta.com.br/api/v1/streams/` | ✅ |
 | RTMP ingest | `rtmp://192.168.50.151:1935/live/cameraN` | ❌ aberto |
+
+> O DNS interno (AdGuard) resolve `cameras.wccosta.com.br` para `192.168.50.151`.
 
 ---
 
@@ -77,7 +79,7 @@ pct exec 201 -- bash -c "cd /opt/srs && docker compose restart"
 
 ### Verificar streams ativos
 ```bash
-curl -s -u 'admin:SENHA' http://192.168.50.151:8888/api/v1/streams/ | python3 -m json.tool
+curl -s -k -u 'admin:SENHA' https://cameras.wccosta.com.br/api/v1/streams/ | python3 -m json.tool
 ```
 
 ### Trocar senha do painel
@@ -200,6 +202,53 @@ pct exec 201 -- bash -c "cd /opt/srs && docker compose restart srs"
 
 ---
 
+
+## Certificados TLS (v6)
+
+O painel de câmeras utiliza certificado público **Let’s Encrypt** para `cameras.wccosta.com.br`.
+
+### Emitir ou renovar certificado
+
+No `ca-server` (CT 101), o `certbot` está em `/opt/certbot/bin/certbot` e usa Azure DNS:
+
+```bash
+pct exec 101 -- bash -c "/opt/certbot/bin/certbot certonly \
+  --authenticator dns-azure \
+  --dns-azure-config /etc/letsencrypt/azure.ini \
+  -d cameras.wccosta.com.br \
+  -d adguard.wccosta.com.br \
+  -d dashboard.wccosta.com.br \
+  -d grafana.wccosta.com.br \
+  -d longhorn.wccosta.com.br \
+  -d pfsense-fw01.wccosta.com.br \
+  -d prometheus.wccosta.com.br \
+  -d argocd.wccosta.com.br \
+  -d zabbix.wccosta.com.br \
+  --agree-tos -n"
+```
+
+### Copiar certificado para o Caddy
+
+```bash
+pct exec 101 -- cat /etc/letsencrypt/live/cameras.wccosta.com.br/fullchain.pem > /tmp/fullchain.pem
+pct exec 101 -- cat /etc/letsencrypt/live/cameras.wccosta.com.br/privkey.pem > /tmp/privkey.pem
+pct exec 201 -- bash -c 'cat > /opt/srs/certs/fullchain.pem' < /tmp/fullchain.pem
+pct exec 201 -- bash -c 'cat > /opt/srs/certs/privkey.pem' < /tmp/privkey.pem
+pct exec 201 -- bash -c "cd /opt/srs && docker compose restart caddy"
+```
+
+### Renovação automática
+
+```bash
+pct exec 101 -- crontab -l
+```
+
+Agendamento:
+
+```text
+0 3 * * * /opt/certbot/bin/certbot renew --quiet
+```
+
 ## Verificação de saúde completa
 
 ```bash
@@ -216,7 +265,7 @@ df -h | grep -E '/$|records'
 docker stats --no-stream --format 'table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}'
 
 echo '=== Auth ==='
-curl -s -o /dev/null -w 'Sem auth: %{http_code}\n' http://localhost:8888/
+curl -s -k -o /dev/null -w 'Sem auth: %{http_code}\n' https://localhost/
 nc -zv localhost 1935 2>&1 | grep -o 'succeeded\|failed' | xargs echo 'RTMP 1935:'
 "
 ```
@@ -247,7 +296,8 @@ nc -zv localhost 1935 2>&1 | grep -o 'succeeded\|failed' | xargs echo 'RTMP 1935
 | Jun/2026 | VM antiga nginx-rtmp bare metal (`192.168.50.12`) |
 | Jun/2026 | Migração para Docker nginx-rtmp (`docker/`) |
 | Jun/2026 | Migração para SRS em VM via Terraform (`192.168.50.150`) |
-| Jun/2026 | Migração para SRS em LXC Ubuntu 26.04 (`192.168.50.151`) — **atual** |
+| Jun/2026 | Migração para SRS em LXC Ubuntu 26.04 (`192.168.50.151`) |
+| Ago/2026 | Certificado Let’s Encrypt via Azure DNS para `cameras.wccosta.com.br` e demais subdomínios — **atual** |
 
 ---
 
