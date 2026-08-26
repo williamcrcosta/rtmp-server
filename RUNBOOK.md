@@ -249,6 +249,115 @@ Agendamento:
 0 3 * * * /opt/certbot/bin/certbot renew --quiet
 ```
 
+
+## Aplicar certificado em serviços RKE2
+
+O certificado `san-wccosta-fullchain` é emitido no `ca-server` (CT 101) e replicado para os ingressos do RKE2.
+
+### Arquivos no ca-server
+
+```bash
+/etc/letsencrypt/live/san-wccosta-fullchain/fullchain.pem
+/etc/letsencrypt/live/san-wccosta-fullchain/privkey.pem
+```
+
+### Copiar certificado para o nó do RKE2
+
+No Proxmox:
+
+```bash
+pct exec 101 -- cat /etc/letsencrypt/live/san-wccosta-fullchain/fullchain.pem > /tmp/wccosta-fullchain.pem
+pct exec 101 -- cat /etc/letsencrypt/live/san-wccosta-fullchain/privkey.pem > /tmp/wccosta-privkey.pem
+scp /tmp/wccosta-fullchain.pem root@192.168.50.20:/root/
+scp /tmp/wccosta-privkey.pem root@192.168.50.20:/root/
+```
+
+### Criar secrets TLS e atualizar ingressos
+
+Dentro do `rke2-cp-01` (`192.168.50.20`):
+
+```bash
+export PATH="$PATH:/var/lib/rancher/rke2/bin"
+export KUBECONFIG=/etc/rancher/rke2/rke2.yaml
+
+CERT=/root/wccosta-fullchain.pem
+KEY=/root/wccosta-privkey.pem
+
+for ns in kubernetes-dashboard longhorn-system monitoring platform-argocd zabbix; do
+  kubectl -n "$ns" create secret tls wccosta-tls     --cert="$CERT" --key="$KEY"     --dry-run=client -o yaml | kubectl apply -f -
+done
+
+kubectl -n kubernetes-dashboard patch ingress kubernetes-dashboard --type='json' -p='[
+  {"op": "replace", "path": "/spec/rules/0/host", "value": "dashboard.wccosta.com.br"},
+  {"op": "replace", "path": "/spec/tls/0/hosts/0", "value": "dashboard.wccosta.com.br"},
+  {"op": "replace", "path": "/spec/tls/0/secretName", "value": "wccosta-tls"}]'
+
+kubectl -n longhorn-system patch ingress longhorn --type='json' -p='[
+  {"op": "replace", "path": "/spec/rules/0/host", "value": "longhorn.wccosta.com.br"},
+  {"op": "replace", "path": "/spec/tls/0/hosts/0", "value": "longhorn.wccosta.com.br"},
+  {"op": "replace", "path": "/spec/tls/0/secretName", "value": "wccosta-tls"}]'
+
+kubectl -n monitoring patch ingress monitoring-grafana --type='json' -p='[
+  {"op": "replace", "path": "/spec/rules/0/host", "value": "grafana.wccosta.com.br"},
+  {"op": "replace", "path": "/spec/tls/0/hosts/0", "value": "grafana.wccosta.com.br"},
+  {"op": "replace", "path": "/spec/tls/0/secretName", "value": "wccosta-tls"}]'
+
+kubectl -n monitoring patch ingress monitoring-kube-prometheus-prometheus --type='json' -p='[
+  {"op": "replace", "path": "/spec/rules/0/host", "value": "prometheus.wccosta.com.br"},
+  {"op": "replace", "path": "/spec/tls/0/hosts/0", "value": "prometheus.wccosta.com.br"},
+  {"op": "replace", "path": "/spec/tls/0/secretName", "value": "wccosta-tls"}]'
+
+kubectl -n platform-argocd patch ingress argocd --type='json' -p='[
+  {"op": "replace", "path": "/spec/rules/0/host", "value": "argocd.wccosta.com.br"},
+  {"op": "replace", "path": "/spec/tls/0/hosts/0", "value": "argocd.wccosta.com.br"},
+  {"op": "replace", "path": "/spec/tls/0/secretName", "value": "wccosta-tls"}]'
+
+kubectl -n zabbix patch ingress zabbix --type='json' -p='[
+  {"op": "replace", "path": "/spec/rules/0/host", "value": "zabbix.wccosta.com.br"},
+  {"op": "replace", "path": "/spec/tls/0/hosts/0", "value": "zabbix.wccosta.com.br"},
+  {"op": "replace", "path": "/spec/tls/0/secretName", "value": "wccosta-tls"}]'
+
+kubectl get ingress -A
+```
+
+### DNS interno (AdGuard)
+
+Adicione os rewrites em `/opt/AdGuardHome/AdGuardHome.yaml` no CT 400:
+
+```yaml
+  rewrites:
+    - domain: adguard.wccosta.com.br
+      answer: 192.168.50.25
+      enabled: true
+    - domain: proxmox.wccosta.com.br
+      answer: 192.168.50.250
+      enabled: true
+    - domain: dashboard.wccosta.com.br
+      answer: 192.168.50.20
+      enabled: true
+    - domain: longhorn.wccosta.com.br
+      answer: 192.168.50.20
+      enabled: true
+    - domain: grafana.wccosta.com.br
+      answer: 192.168.50.20
+      enabled: true
+    - domain: prometheus.wccosta.com.br
+      answer: 192.168.50.20
+      enabled: true
+    - domain: argocd.wccosta.com.br
+      answer: 192.168.50.20
+      enabled: true
+    - domain: zabbix.wccosta.com.br
+      answer: 192.168.50.20
+      enabled: true
+```
+
+Depois:
+
+```bash
+systemctl restart AdGuardHome
+```
+
 ## Verificação de saúde completa
 
 ```bash
