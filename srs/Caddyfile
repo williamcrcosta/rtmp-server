@@ -8,6 +8,11 @@ cameras.wccosta.com.br {
     reverse_proxy /api/* srs:1985
 
     # Proxy do HLS do MediaMTX (painel rtsp.html e HTTPS, stream e HTTP)
+    # WHEP do MediaMTX (sinalizacao WebRTC - SDP offer/answer)
+    handle_path /mtx-whep/* {
+        reverse_proxy mediamtx:8889
+    }
+
     # API do MediaMTX (stats do painel rtsp.html)
     handle_path /mtx-api/* {
         reverse_proxy mediamtx:9997

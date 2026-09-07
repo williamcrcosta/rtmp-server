@@ -32,6 +32,10 @@ rtspTransports: [tcp]
 hls: yes
 hlsAddress: :8888
 hlsAlwaysRemux: no
+# Reduz latencia do HLS (segmentos menores)
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+hlsPartDuration: 100ms
 
 # WebRTC (baixa latência no navegador, ~200-500ms)
 # Player embutido: http://IP:8889/<camera>

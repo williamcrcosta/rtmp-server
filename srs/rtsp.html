@@ -23,6 +23,7 @@
     .cam-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #111; }
     .cam-title { font-weight: 600; font-size: 0.95rem; }
     .cam-title .badge { font-size: 0.65rem; background: #1e3a5f; color: #60a5fa; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+    .cam-title .badge.proto { background: #14532d; color: #4ade80; }
     .status { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
     .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; transition: background 0.3s; }
     .dot.live { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
@@ -72,8 +73,8 @@
     <div class="value yellow" id="stat-bw">--</div>
   </div>
   <div class="stat-card">
-    <div class="label">Fonte</div>
-    <div class="value">RTSP</div>
+    <div class="label">Protocolo</div>
+    <div class="value" id="stat-proto">WebRTC</div>
   </div>
   <div class="stat-card">
     <div class="label">Codec</div>
@@ -85,7 +86,7 @@
 
 <footer>
   MediaMTX RTSP &mdash; <span id="server-ip"></span> &mdash;
-  <a href="/cameras.html">Painel RTMP (Standard)</a> &mdash; API atualiza a cada 5s
+  <a href="/cameras.html">Painel RTMP (Standard)</a> &mdash; WebRTC com fallback HLS
 </footer>
 
 <script>
@@ -93,8 +94,9 @@
   const MTX      = `http://${SERVER}:8889`;
   const HLS_BASE = '/mtx';
   const API      = '/mtx-api';
+  const WHEP     = '/mtx-whep';
   const POLL_MS  = 5000;
-  const HISTORY  = 24; // ~2min de historico (24 amostras x 5s)
+  const HISTORY  = 24;
 
   const CAMERAS = [
     { id: 'camera1_hd', label: 'Câmera 1' },
@@ -102,10 +104,10 @@
     { id: 'camera3_hd', label: 'Câmera 3' },
   ];
 
-  // estado por camera: bytes anteriores + historico de bitrate
-  const state = {};
+  const state  = {};
   const hlsMap = {};
-  CAMERAS.forEach(c => state[c.id] = { lastBytes: 0, lastTime: 0, hist: [] });
+  const pcMap  = {};
+  CAMERAS.forEach(c => state[c.id] = { lastBytes: 0, lastTime: 0, hist: [], proto: '-' });
 
   document.getElementById('server-ip').textContent = SERVER;
 
@@ -120,7 +122,7 @@
     card.className = 'cam-card';
     card.innerHTML = `
       <div class="cam-header">
-        <span class="cam-title">${cam.label}<span class="badge">HD</span></span>
+        <span class="cam-title">${cam.label}<span class="badge">HD</span><span class="badge proto" id="proto-${cam.id}">--</span></span>
         <div class="status">
           <div class="dot loading" id="dot-${cam.id}"></div>
           <span id="status-${cam.id}">Conectando...</span>
@@ -134,7 +136,7 @@
             <line x1="3" y1="3" x2="21" y2="21"/>
           </svg>
           <div>Iniciando stream...</div>
-          <div class="hint">O transcode H.265→H.264 pode levar ~10s na 1ª vez</div>
+          <div class="hint">WebRTC (~1s) ou HLS (~9s) — o transcode pode levar ~10s na 1ª vez</div>
         </div>
       </div>
       <canvas class="spark" id="spark-${cam.id}" height="36"></canvas>
@@ -152,7 +154,7 @@
       </div>
     `;
     grid.appendChild(card);
-    loadStream(cam.id);
+    startStream(cam.id);
   });
 
   function setStatus(id, st, msg) {
@@ -162,7 +164,61 @@
     ov.className = st === 'live' ? 'overlay-msg hidden' : 'overlay-msg';
   }
 
-  function loadStream(id) {
+  function setProto(id, p) {
+    state[id].proto = p;
+    const el = document.getElementById(`proto-${id}`);
+    if (el) el.textContent = p;
+  }
+
+  // ---- WebRTC via WHEP ----
+  async function startWebRTC(id) {
+    const video = document.getElementById(`video-${id}`);
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+    pcMap[id] = pc;
+
+    pc.addTransceiver('video', { direction: 'recvonly' });
+    pc.addTransceiver('audio', { direction: 'recvonly' });
+
+    pc.ontrack = (e) => {
+      video.srcObject = e.streams[0];
+      setStatus(id, 'live', 'Ao vivo');
+      setProto(id, 'WebRTC');
+      video.play().catch(()=>{});
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+        fallbackToHLS(id);
+      }
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    // espera ICE gathering completar (non-trickle)
+    await new Promise(resolve => {
+      if (pc.iceGatheringState === 'complete') return resolve();
+      pc.onicegatheringstatechange = () => {
+        if (pc.iceGatheringState === 'complete') resolve();
+      };
+      setTimeout(resolve, 3000);
+    });
+
+    const res = await fetch(`${WHEP}/${id}/whep`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/sdp' },
+      body: pc.localDescription.sdp
+    });
+
+    if (!res.ok) throw new Error('WHEP ' + res.status);
+    const answerSdp = await res.text();
+    await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+  }
+
+  // ---- HLS fallback ----
+  function startHLS(id) {
     const video  = document.getElementById(`video-${id}`);
     const hlsUrl = `${HLS_BASE}/${id}/index.m3u8`;
 
@@ -172,28 +228,42 @@
         hlsMap[id] = hls;
         hls.loadSource(hlsUrl);
         hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => { setStatus(id, 'live', 'Ao vivo'); video.play().catch(()=>{}); });
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setStatus(id, 'live', 'Ao vivo');
+          setProto(id, 'HLS');
+          video.play().catch(()=>{});
+        });
         hls.on(Hls.Events.ERROR, (_, d) => {
           if (d.fatal) { setStatus(id, 'error', 'Sem sinal'); hls.destroy(); delete hlsMap[id]; setTimeout(tryLoad, 8000); }
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = hlsUrl;
-        video.addEventListener('loadedmetadata', () => { setStatus(id, 'live', 'Ao vivo'); video.play().catch(()=>{}); });
+        video.addEventListener('loadedmetadata', () => { setStatus(id, 'live', 'Ao vivo'); setProto(id, 'HLS'); video.play().catch(()=>{}); });
         video.addEventListener('error', () => { setStatus(id, 'error', 'Sem sinal'); setTimeout(tryLoad, 8000); });
       }
     }
-    setStatus(id, 'loading', 'Conectando...');
     tryLoad();
   }
 
-  function fmtBytes(b) {
-    if (!b) return '0';
-    if (b > 1e9) return (b/1e9).toFixed(1) + ' GB';
-    if (b > 1e6) return (b/1e6).toFixed(1) + ' MB';
-    if (b > 1e3) return (b/1e3).toFixed(0) + ' KB';
-    return b + ' B';
+  function fallbackToHLS(id) {
+    if (state[id].proto === 'HLS') return;
+    console.log(`[${id}] WebRTC falhou, caindo pra HLS`);
+    if (pcMap[id]) { pcMap[id].close(); delete pcMap[id]; }
+    setProto(id, 'HLS');
+    startHLS(id);
   }
 
+  async function startStream(id) {
+    setStatus(id, 'loading', 'Conectando...');
+    try {
+      await startWebRTC(id);
+    } catch(e) {
+      console.log(`[${id}] WebRTC erro:`, e.message);
+      fallbackToHLS(id);
+    }
+  }
+
+  // ---- stats ----
   function fmtBw(bps) {
     if (!bps || bps <= 0) return '0 Kbps';
     const kbps = bps / 1000;
@@ -201,7 +271,6 @@
     return kbps.toFixed(0) + ' Kbps';
   }
 
-  // desenha sparkline do historico de bitrate
   function drawSpark(id) {
     const cv = document.getElementById(`spark-${id}`);
     if (!cv) return;
@@ -222,7 +291,6 @@
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     });
     ctx.stroke();
-    // preenchimento suave
     ctx.lineTo((hist.length - 1) * step, h);
     ctx.lineTo(0, h);
     ctx.closePath();
@@ -246,7 +314,6 @@
         const st = state[p.name];
         if (!st) return;
 
-        // bitrate = delta de bytes / delta de tempo
         const bytes = p.bytesReceived || 0;
         if (st.lastTime > 0 && bytes >= st.lastBytes) {
           const dt = (now - st.lastTime) / 1000;
@@ -267,7 +334,6 @@
         }
       });
 
-      // resolucao real + latencia do video
       CAMERAS.forEach(c => {
         const v = document.getElementById(`video-${c.id}`);
         if (v && v.videoWidth) {
@@ -276,6 +342,8 @@
         const hls = hlsMap[c.id];
         if (hls && hls.latency) {
           document.getElementById(`cs-lat-${c.id}`).textContent = hls.latency.toFixed(1) + 's';
+        } else if (state[c.id].proto === 'WebRTC') {
+          document.getElementById(`cs-lat-${c.id}`).textContent = '~1s';
         }
       });
 
