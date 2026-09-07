@@ -16,3 +16,4 @@ terraform.tfvars
 *.tfstate
 *.tfstate.backup
 .terraform.lock.hcl
+mediamtx.env

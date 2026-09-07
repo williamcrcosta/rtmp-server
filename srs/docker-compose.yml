@@ -31,6 +31,26 @@ services:
     networks:
       - rtmp-net
 
+  # MediaMTX — pull RTSP das câmeras iM7 e serve WebRTC/HLS
+  # Contorna a limitação do RTMP (que não carrega H.265 em modo High)
+  mediamtx:
+    image: bluenviron/mediamtx:latest-ffmpeg
+    container_name: mediamtx
+    restart: unless-stopped
+    env_file:
+      - ./mediamtx.env
+    ports:
+      - "8554:8554"      # RTSP out
+      - "8888:8888"      # HLS
+      - "8889:8889"      # WebRTC (player + WHEP/WHIP)
+      - "8189:8189/udp"  # WebRTC UDP
+      - "9997:9997"      # API
+      - "9998:9998"      # métricas Prometheus
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+    networks:
+      - rtmp-net
+
 networks:
   rtmp-net:
     driver: bridge

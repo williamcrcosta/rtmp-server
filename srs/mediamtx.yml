@@ -1,0 +1,73 @@
+###############################################
+# MediaMTX — RTSP pull das câmeras Intelbras iM7
+# Docs: https://github.com/bluenviron/mediamtx
+#
+# Papel no stack:
+#   iM7 (RTSP) -> MediaMTX -> WebRTC/HLS/RTSP-out
+#   O SRS continua cuidando do RTMP push + DVR.
+###############################################
+
+logLevel: info
+logDestinations: [stdout]
+
+# API de controle/observabilidade
+# GET http://IP:9997/v3/paths/list  -> estado de cada câmera
+api: yes
+apiAddress: :9997
+
+# Métricas Prometheus
+# http://IP:9998/metrics
+metrics: yes
+metricsAddress: :9998
+
+# RTMP desabilitado — quem cuida do RTMP é o SRS
+rtmp: no
+
+# RTSP server (re-serve os streams puxados das câmeras)
+rtsp: yes
+rtspAddress: :8554
+rtspTransports: [tcp]
+
+# HLS (compatibilidade com o painel atual)
+hls: yes
+hlsAddress: :8888
+hlsAlwaysRemux: no
+
+# WebRTC (baixa latência no navegador, ~200-500ms)
+# Player embutido: http://IP:8889/<camera>
+webrtc: yes
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+
+# As câmeras são configuradas via variáveis de ambiente
+# MTX_PATHS_* definidas no mediamtx.env (credenciais fora do git)
+
+###############################################
+# Paths transcodificados H.265 -> H.264
+# O stream principal da iM7 3MP é H.265 (não toca
+# no navegador). Estes paths rodam ffmpeg sob
+# demanda: só transcodificam enquanto alguém
+# assiste.
+#
+# Uso: http://IP:8889/camera1_hd  (WebRTC)
+#      http://IP:8888/camera1_hd/index.m3u8 (HLS)
+###############################################
+
+paths:
+  camera1_hd:
+    runOnDemand: ffmpeg -hide_banner -loglevel warning -rtsp_transport tcp -i rtsp://127.0.0.1:8554/camera1 -c:v libx264 -preset veryfast -tune zerolatency -b:v 2M -maxrate 3M -bufsize 4M -c:a aac -b:a 64k -f rtsp rtsp://127.0.0.1:8554/camera1_hd
+    runOnDemandRestart: yes
+    runOnDemandStartTimeout: 15s
+    runOnDemandCloseAfter: 10s
+
+  camera2_hd:
+    runOnDemand: ffmpeg -hide_banner -loglevel warning -rtsp_transport tcp -i rtsp://127.0.0.1:8554/camera2 -c:v libx264 -preset veryfast -tune zerolatency -b:v 2M -maxrate 3M -bufsize 4M -c:a aac -b:a 64k -f rtsp rtsp://127.0.0.1:8554/camera2_hd
+    runOnDemandRestart: yes
+    runOnDemandStartTimeout: 15s
+    runOnDemandCloseAfter: 10s
+
+  camera3_hd:
+    runOnDemand: ffmpeg -hide_banner -loglevel warning -rtsp_transport tcp -i rtsp://127.0.0.1:8554/camera3 -c:v libx264 -preset veryfast -tune zerolatency -b:v 2M -maxrate 3M -bufsize 4M -c:a aac -b:a 64k -f rtsp rtsp://127.0.0.1:8554/camera3_hd
+    runOnDemandRestart: yes
+    runOnDemandStartTimeout: 15s
+    runOnDemandCloseAfter: 10s
