@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Câmeras — HD (RTSP)</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0f0f0f; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+    header { background: #1a1a2e; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #3b82f6; }
+    header h1 { font-size: 1.3rem; color: #fff; letter-spacing: 1px; }
+    header h1 span { color: #3b82f6; }
+    #clock { font-size: 0.9rem; color: #aaa; }
+    .stats-bar { display: flex; gap: 12px; padding: 12px 20px; background: #111; border-bottom: 1px solid #222; flex-wrap: wrap; }
+    .stat-card { background: #1a1a2e; border-radius: 8px; padding: 10px 18px; display: flex; flex-direction: column; gap: 2px; min-width: 130px; border: 1px solid #2a2a4a; }
+    .stat-card .label { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+    .stat-card .value { font-size: 1.2rem; font-weight: 700; color: #60a5fa; }
+    .stat-card .value.green { color: #22c55e; }
+    .stat-card .value.yellow { color: #f59e0b; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(540px, 1fr)); gap: 16px; padding: 20px; flex: 1; }
+    .cam-card { background: #1a1a1a; border-radius: 10px; overflow: hidden; border: 1px solid #2a2a2a; display: flex; flex-direction: column; }
+    .cam-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #111; }
+    .cam-title { font-weight: 600; font-size: 0.95rem; }
+    .cam-title .badge { font-size: 0.65rem; background: #1e3a5f; color: #60a5fa; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+    .status { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; transition: background 0.3s; }
+    .dot.live { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+    .dot.error { background: #e94560; }
+    .dot.loading { background: #f59e0b; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .cam-body { position: relative; background: #000; aspect-ratio: 16/9; }
+    video { width: 100%; height: 100%; display: block; background: #000; }
+    .overlay-msg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.75); font-size: 0.9rem; color: #aaa; gap: 8px; text-align: center; padding: 12px; }
+    .overlay-msg.hidden { display: none; }
+    .overlay-msg svg { width: 40px; height: 40px; stroke: #555; }
+    .overlay-msg .hint { font-size: 0.75rem; color: #666; }
+    .cam-stats { display: flex; gap: 12px; padding: 8px 14px; background: #0d0d0d; flex-wrap: wrap; }
+    .cam-stat { font-size: 0.75rem; color: #888; }
+    .cam-stat span { color: #ccc; font-weight: 600; }
+    .cam-stat .hl { color: #22c55e; }
+    .spark { display: block; width: 100%; height: 36px; background: #0a0a0a; border-top: 1px solid #1a1a1a; }
+    .cam-footer { padding: 8px 14px; display: flex; gap: 10px; background: #111; flex-wrap: wrap; }
+    .cam-footer a { font-size: 0.78rem; color: #60a5fa; text-decoration: none; padding: 3px 8px; border: 1px solid #2a4a7a; border-radius: 4px; transition: background 0.2s; }
+    .cam-footer a:hover { background: #1e3a5f; }
+    footer { text-align: center; padding: 12px; font-size: 0.75rem; color: #444; border-top: 1px solid #222; }
+    footer a { color: #60a5fa; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📹 Painel de <span>Câmeras HD</span> — RTSP</h1>
+  <div id="clock"></div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat-card">
+    <div class="label">Streams ao vivo</div>
+    <div class="value green" id="stat-live">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Paths prontos</div>
+    <div class="value" id="stat-ready">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Viewers total</div>
+    <div class="value" id="stat-readers">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Banda total</div>
+    <div class="value yellow" id="stat-bw">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Fonte</div>
+    <div class="value">RTSP</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Codec</div>
+    <div class="value">H.264</div>
+  </div>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<footer>
+  MediaMTX RTSP &mdash; <span id="server-ip"></span> &mdash;
+  <a href="/cameras.html">Painel RTMP (Standard)</a> &mdash; API atualiza a cada 5s
+</footer>
+
+<script>
+  const SERVER   = window.location.hostname;
+  const MTX      = `http://${SERVER}:8889`;
+  const HLS_BASE = '/mtx';
+  const API      = '/mtx-api';
+  const POLL_MS  = 5000;
+  const HISTORY  = 24; // ~2min de historico (24 amostras x 5s)
+
+  const CAMERAS = [
+    { id: 'camera1_hd', label: 'Câmera 1' },
+    { id: 'camera2_hd', label: 'Câmera 2' },
+    { id: 'camera3_hd', label: 'Câmera 3' },
+  ];
+
+  // estado por camera: bytes anteriores + historico de bitrate
+  const state = {};
+  const hlsMap = {};
+  CAMERAS.forEach(c => state[c.id] = { lastBytes: 0, lastTime: 0, hist: [] });
+
+  document.getElementById('server-ip').textContent = SERVER;
+
+  setInterval(() => {
+    document.getElementById('clock').textContent = new Date().toLocaleString('pt-BR');
+  }, 1000);
+  document.getElementById('clock').textContent = new Date().toLocaleString('pt-BR');
+
+  const grid = document.getElementById('grid');
+  CAMERAS.forEach(cam => {
+    const card = document.createElement('div');
+    card.className = 'cam-card';
+    card.innerHTML = `
+      <div class="cam-header">
+        <span class="cam-title">${cam.label}<span class="badge">HD</span></span>
+        <div class="status">
+          <div class="dot loading" id="dot-${cam.id}"></div>
+          <span id="status-${cam.id}">Conectando...</span>
+        </div>
+      </div>
+      <div class="cam-body">
+        <video id="video-${cam.id}" autoplay muted playsinline controls></video>
+        <div class="overlay-msg" id="overlay-${cam.id}">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0013.5 5.25h-9A2.25 2.25 0 002.25 9.75v7.5A2.25 2.25 0 004.5 18.75z"/>
+            <line x1="3" y1="3" x2="21" y2="21"/>
+          </svg>
+          <div>Iniciando stream...</div>
+          <div class="hint">O transcode H.265→H.264 pode levar ~10s na 1ª vez</div>
+        </div>
+      </div>
+      <canvas class="spark" id="spark-${cam.id}" height="36"></canvas>
+      <div class="cam-stats" id="camstats-${cam.id}">
+        <div class="cam-stat">Bitrate: <span class="hl" id="cs-bw-${cam.id}">--</span></div>
+        <div class="cam-stat">Resolução: <span id="cs-res-${cam.id}">--</span></div>
+        <div class="cam-stat">Estado: <span id="cs-state-${cam.id}">--</span></div>
+        <div class="cam-stat">Viewers: <span id="cs-readers-${cam.id}">--</span></div>
+        <div class="cam-stat">Latência: <span id="cs-lat-${cam.id}">--</span></div>
+      </div>
+      <div class="cam-footer">
+        <a href="${MTX}/${cam.id}" target="_blank">⚡ WebRTC</a>
+        <a href="${MTX}/${cam.id.replace('_hd','_full')}" target="_blank">🔎 Full 3MP</a>
+        <a href="${HLS_BASE}/${cam.id}/index.m3u8" target="_blank">🔗 HLS</a>
+      </div>
+    `;
+    grid.appendChild(card);
+    loadStream(cam.id);
+  });
+
+  function setStatus(id, st, msg) {
+    document.getElementById(`dot-${id}`).className = `dot ${st}`;
+    document.getElementById(`status-${id}`).textContent = msg;
+    const ov = document.getElementById(`overlay-${id}`);
+    ov.className = st === 'live' ? 'overlay-msg hidden' : 'overlay-msg';
+  }
+
+  function loadStream(id) {
+    const video  = document.getElementById(`video-${id}`);
+    const hlsUrl = `${HLS_BASE}/${id}/index.m3u8`;
+
+    function tryLoad() {
+      if (Hls.isSupported()) {
+        const hls = new Hls({ liveSyncDurationCount: 3, liveMaxLatencyDurationCount: 6 });
+        hlsMap[id] = hls;
+        hls.loadSource(hlsUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => { setStatus(id, 'live', 'Ao vivo'); video.play().catch(()=>{}); });
+        hls.on(Hls.Events.ERROR, (_, d) => {
+          if (d.fatal) { setStatus(id, 'error', 'Sem sinal'); hls.destroy(); delete hlsMap[id]; setTimeout(tryLoad, 8000); }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = hlsUrl;
+        video.addEventListener('loadedmetadata', () => { setStatus(id, 'live', 'Ao vivo'); video.play().catch(()=>{}); });
+        video.addEventListener('error', () => { setStatus(id, 'error', 'Sem sinal'); setTimeout(tryLoad, 8000); });
+      }
+    }
+    setStatus(id, 'loading', 'Conectando...');
+    tryLoad();
+  }
+
+  function fmtBytes(b) {
+    if (!b) return '0';
+    if (b > 1e9) return (b/1e9).toFixed(1) + ' GB';
+    if (b > 1e6) return (b/1e6).toFixed(1) + ' MB';
+    if (b > 1e3) return (b/1e3).toFixed(0) + ' KB';
+    return b + ' B';
+  }
+
+  function fmtBw(bps) {
+    if (!bps || bps <= 0) return '0 Kbps';
+    const kbps = bps / 1000;
+    if (kbps > 1000) return (kbps/1000).toFixed(1) + ' Mbps';
+    return kbps.toFixed(0) + ' Kbps';
+  }
+
+  // desenha sparkline do historico de bitrate
+  function drawSpark(id) {
+    const cv = document.getElementById(`spark-${id}`);
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const w = cv.width = cv.offsetWidth;
+    const h = cv.height = 36;
+    const hist = state[id].hist;
+    ctx.clearRect(0, 0, w, h);
+    if (hist.length < 2) return;
+    const max = Math.max(...hist, 1);
+    const step = w / (HISTORY - 1);
+    ctx.beginPath();
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 1.5;
+    hist.forEach((v, i) => {
+      const x = i * step;
+      const y = h - (v / max) * (h - 4) - 2;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    // preenchimento suave
+    ctx.lineTo((hist.length - 1) * step, h);
+    ctx.lineTo(0, h);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(34,197,94,0.12)';
+    ctx.fill();
+  }
+
+  async function fetchStats() {
+    try {
+      const res = await fetch(`${API}/v3/paths/list`);
+      const data = await res.json();
+      const items = data.items || [];
+      const now = Date.now();
+
+      let ready = 0, readers = 0, totalBw = 0;
+
+      items.forEach(p => {
+        if (p.ready) ready++;
+        readers += (p.readers || []).length;
+
+        const st = state[p.name];
+        if (!st) return;
+
+        // bitrate = delta de bytes / delta de tempo
+        const bytes = p.bytesReceived || 0;
+        if (st.lastTime > 0 && bytes >= st.lastBytes) {
+          const dt = (now - st.lastTime) / 1000;
+          const bps = ((bytes - st.lastBytes) * 8) / dt;
+          st.hist.push(bps);
+          if (st.hist.length > HISTORY) st.hist.shift();
+          document.getElementById(`cs-bw-${p.name}`).textContent = fmtBw(bps);
+          totalBw += bps;
+          drawSpark(p.name);
+        }
+        st.lastBytes = bytes;
+        st.lastTime = now;
+
+        const el = document.getElementById(`cs-state-${p.name}`);
+        if (el) {
+          document.getElementById(`cs-state-${p.name}`).textContent   = p.ready ? 'pronto' : (p.online ? 'conectando' : 'offline');
+          document.getElementById(`cs-readers-${p.name}`).textContent = (p.readers || []).length;
+        }
+      });
+
+      // resolucao real + latencia do video
+      CAMERAS.forEach(c => {
+        const v = document.getElementById(`video-${c.id}`);
+        if (v && v.videoWidth) {
+          document.getElementById(`cs-res-${c.id}`).textContent = `${v.videoWidth}x${v.videoHeight}`;
+        }
+        const hls = hlsMap[c.id];
+        if (hls && hls.latency) {
+          document.getElementById(`cs-lat-${c.id}`).textContent = hls.latency.toFixed(1) + 's';
+        }
+      });
+
+      const live = CAMERAS.filter(c =>
+        document.getElementById(`dot-${c.id}`)?.className.includes('live')
+      ).length;
+
+      document.getElementById('stat-live').textContent    = `${live}/${CAMERAS.length}`;
+      document.getElementById('stat-ready').textContent   = `${ready}/${items.length}`;
+      document.getElementById('stat-readers').textContent = readers;
+      document.getElementById('stat-bw').textContent      = fmtBw(totalBw);
+    } catch(e) {
+      document.getElementById('stat-ready').textContent = '!';
+    }
+  }
+
+  fetchStats();
+  setInterval(fetchStats, POLL_MS);
+</script>
+</body>
+</html>

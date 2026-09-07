@@ -10,6 +10,7 @@ services:
     volumes:
       - ./srs.conf:/usr/local/srs/conf/srs.conf:ro
       - ./index.html:/usr/local/srs/objs/nginx/html/cameras.html:ro
+      - ./rtsp.html:/usr/local/srs/objs/nginx/html/rtsp.html:ro
       - records:/var/records
     networks:
       - rtmp-net
@@ -23,6 +24,7 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/etc/caddy/certs:ro
       - /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - caddy_data:/data
       - caddy_config:/config

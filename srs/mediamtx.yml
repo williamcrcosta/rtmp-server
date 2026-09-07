@@ -55,19 +55,50 @@ webrtcLocalUDPAddress: :8189
 
 paths:
   camera1_hd:
-    runOnDemand: ffmpeg -hide_banner -loglevel warning -rtsp_transport tcp -i rtsp://127.0.0.1:8554/camera1 -c:v libx264 -preset veryfast -tune zerolatency -b:v 2M -maxrate 3M -bufsize 4M -c:a aac -b:a 64k -f rtsp rtsp://127.0.0.1:8554/camera1_hd
+    runOnDemand: ffmpeg -hide_banner -loglevel warning -rtsp_transport tcp -i rtsp://127.0.0.1:8554/camera1 -c:v libx264 -preset ultrafast -tune zerolatency -vf scale=1280:720 -b:v 1.2M -maxrate 1.5M -bufsize 2M -c:a aac -b:a 64k -f rtsp rtsp://127.0.0.1:8554/camera1_hd
     runOnDemandRestart: yes
     runOnDemandStartTimeout: 15s
     runOnDemandCloseAfter: 10s
 
   camera2_hd:
-    runOnDemand: ffmpeg -hide_banner -loglevel warning -rtsp_transport tcp -i rtsp://127.0.0.1:8554/camera2 -c:v libx264 -preset veryfast -tune zerolatency -b:v 2M -maxrate 3M -bufsize 4M -c:a aac -b:a 64k -f rtsp rtsp://127.0.0.1:8554/camera2_hd
+    runOnDemand: ffmpeg -hide_banner -loglevel warning -rtsp_transport tcp -i rtsp://127.0.0.1:8554/camera2 -c:v libx264 -preset ultrafast -tune zerolatency -vf scale=1280:720 -b:v 1.2M -maxrate 1.5M -bufsize 2M -c:a aac -b:a 64k -f rtsp rtsp://127.0.0.1:8554/camera2_hd
     runOnDemandRestart: yes
     runOnDemandStartTimeout: 15s
     runOnDemandCloseAfter: 10s
 
   camera3_hd:
-    runOnDemand: ffmpeg -hide_banner -loglevel warning -rtsp_transport tcp -i rtsp://127.0.0.1:8554/camera3 -c:v libx264 -preset veryfast -tune zerolatency -b:v 2M -maxrate 3M -bufsize 4M -c:a aac -b:a 64k -f rtsp rtsp://127.0.0.1:8554/camera3_hd
+    runOnDemand: ffmpeg -hide_banner -loglevel warning -rtsp_transport tcp -i rtsp://127.0.0.1:8554/camera3 -c:v libx264 -preset ultrafast -tune zerolatency -vf scale=1280:720 -b:v 1.2M -maxrate 1.5M -bufsize 2M -c:a aac -b:a 64k -f rtsp rtsp://127.0.0.1:8554/camera3_hd
+    runOnDemandRestart: yes
+    runOnDemandStartTimeout: 15s
+    runOnDemandCloseAfter: 10s
+
+# Libera API sem senha (rede interna; painel usa so leitura)
+authInternalUsers:
+- user: any
+  ips: []
+  permissions:
+  - action: publish
+  - action: read
+  - action: playback
+  - action: api
+  - action: metrics
+
+  # Paths FULL — qualidade nativa 3MP, sob demanda
+  # Abra so quando precisar de detalhe (gasta ~1 core por stream)
+  camera1_full:
+    runOnDemand: ffmpeg -hide_banner -loglevel warning -rtsp_transport tcp -i rtsp://127.0.0.1:8554/camera1 -c:v libx264 -preset veryfast -tune zerolatency -b:v 2.5M -maxrate 3.5M -bufsize 5M -c:a aac -b:a 64k -f rtsp rtsp://127.0.0.1:8554/camera1_full
+    runOnDemandRestart: yes
+    runOnDemandStartTimeout: 15s
+    runOnDemandCloseAfter: 10s
+
+  camera2_full:
+    runOnDemand: ffmpeg -hide_banner -loglevel warning -rtsp_transport tcp -i rtsp://127.0.0.1:8554/camera2 -c:v libx264 -preset veryfast -tune zerolatency -b:v 2.5M -maxrate 3.5M -bufsize 5M -c:a aac -b:a 64k -f rtsp rtsp://127.0.0.1:8554/camera2_full
+    runOnDemandRestart: yes
+    runOnDemandStartTimeout: 15s
+    runOnDemandCloseAfter: 10s
+
+  camera3_full:
+    runOnDemand: ffmpeg -hide_banner -loglevel warning -rtsp_transport tcp -i rtsp://127.0.0.1:8554/camera3 -c:v libx264 -preset veryfast -tune zerolatency -b:v 2.5M -maxrate 3.5M -bufsize 5M -c:a aac -b:a 64k -f rtsp rtsp://127.0.0.1:8554/camera3_full
     runOnDemandRestart: yes
     runOnDemandStartTimeout: 15s
     runOnDemandCloseAfter: 10s
