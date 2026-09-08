@@ -73,6 +73,10 @@
     <div class="value yellow" id="stat-bw">--</div>
   </div>
   <div class="stat-card">
+    <div class="label">Total trafegado</div>
+    <div class="value" id="stat-total-traffic">--</div>
+  </div>
+  <div class="stat-card">
     <div class="label">Protocolo</div>
     <div class="value" id="stat-proto">WebRTC</div>
   </div>
@@ -271,6 +275,14 @@
     return kbps.toFixed(0) + ' Kbps';
   }
 
+  function fmtBytes(bytes) {
+    if (!bytes || bytes <= 0) return '0 B';
+    const units = ['B','KB','MB','GB','TB'];
+    let i = 0, n = bytes;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+    return i === 0 ? Math.floor(n) + ' ' + units[i] : n.toFixed(2) + ' ' + units[i];
+  }
+
   function drawSpark(id) {
     const cv = document.getElementById(`spark-${id}`);
     if (!cv) return;
@@ -305,7 +317,7 @@
       const items = data.items || [];
       const now = Date.now();
 
-      let ready = 0, readers = 0, totalBw = 0;
+      let ready = 0, readers = 0, totalBw = 0, totalBytes = 0;
 
       items.forEach(p => {
         if (p.ready) ready++;
@@ -315,6 +327,7 @@
         if (!st) return;
 
         const bytes = p.bytesReceived || 0;
+        totalBytes += bytes;
         if (st.lastTime > 0 && bytes >= st.lastBytes) {
           const dt = (now - st.lastTime) / 1000;
           const bps = ((bytes - st.lastBytes) * 8) / dt;
@@ -355,6 +368,7 @@
       document.getElementById('stat-ready').textContent   = `${ready}/${items.length}`;
       document.getElementById('stat-readers').textContent = readers;
       document.getElementById('stat-bw').textContent      = fmtBw(totalBw);
+      document.getElementById('stat-total-traffic').textContent = fmtBytes(totalBytes);
     } catch(e) {
       document.getElementById('stat-ready').textContent = '!';
     }
