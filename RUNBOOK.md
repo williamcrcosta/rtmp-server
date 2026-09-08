@@ -37,11 +37,16 @@ ssh root@192.168.50.151
 
 | Serviço | URL | Auth |
 |---|---|---|
-| Painel câmeras | `https://cameras.wccosta.com.br/cameras.html` | ✅ admin + senha |
+| Painel câmeras RTSP | `https://cameras.wccosta.com.br/rtsp.html` | ✅ admin + senha |
+| Painel câmeras RTMP | `https://cameras.wccosta.com.br/cameras.html` | ✅ admin + senha |
 | Dashboard SRS | `https://cameras.wccosta.com.br/` | ✅ admin + senha |
-| HLS camera1 | `https://cameras.wccosta.com.br/live/camera1.m3u8` | ✅ |
-| HLS camera2 | `https://cameras.wccosta.com.br/live/camera2.m3u8` | ✅ |
-| API stats | `https://cameras.wccosta.com.br/api/v1/streams/` | ✅ |
+| HLS SRS camera1 | `https://cameras.wccosta.com.br/live/camera1.m3u8` | ✅ |
+| HLS SRS camera2 | `https://cameras.wccosta.com.br/live/camera2.m3u8` | ✅ |
+| WebRTC MediaMTX camera1 | `https://cameras.wccosta.com.br/mtx-whep/camera1_hd` | ✅ |
+| HLS MediaMTX camera1 | `https://cameras.wccosta.com.br/mtx/camera1_hd/index.m3u8` | ✅ |
+| API stats SRS | `https://cameras.wccosta.com.br/api/v1/streams/` | ✅ |
+| API MediaMTX | `https://cameras.wccosta.com.br/mtx-api/v3/paths/list` | ✅ |
+| Métricas MediaMTX | `http://192.168.50.151:9998/metrics` | ❌ aberto |
 | RTMP ingest | `rtmp://192.168.50.151:1935/live/cameraN` | ❌ aberto |
 
 > O DNS interno (AdGuard) resolve `cameras.wccosta.com.br` para `192.168.50.151`.

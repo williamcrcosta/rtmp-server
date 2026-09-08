@@ -153,7 +153,7 @@ Toda configuração de cada versão está preservada nas pastas correspondentes.
 
 ---
 
-## Arquitetura atual (v6 — SRS + Caddy + Let's Encrypt)
+## Arquitetura atual (v6 — SRS + MediaMTX + Caddy + Let's Encrypt)
 
 ```
 App Mibo / OBS / FFmpeg / Câmera IP
@@ -178,14 +178,21 @@ App Mibo / OBS / FFmpeg / Câmera IP
 Gravações → /var/records
 ```
 
+> **RTSP (câmeras iM7):** o fluxo passa pelo MediaMTX, transcode H.265→H.264 e é consumido em `https://cameras.wccosta.com.br/rtsp.html`.
+
 ## URLs atuais (v6)
 
 | Serviço | URL | Auth |
 |---|---|---|
-| **Painel câmeras** | `https://cameras.wccosta.com.br/cameras.html` | ✅ |
+| **Painel câmeras RTSP** | `https://cameras.wccosta.com.br/rtsp.html` | ✅ |
+| **Painel câmeras RTMP** | `https://cameras.wccosta.com.br/cameras.html` | ✅ |
 | **Dashboard SRS** | `https://cameras.wccosta.com.br/` | ✅ |
-| **HLS** | `https://cameras.wccosta.com.br/live/cameraN.m3u8` | ✅ |
-| **API stats** | `https://cameras.wccosta.com.br/api/v1/streams/` | ✅ |
+| **HLS SRS** | `https://cameras.wccosta.com.br/live/cameraN.m3u8` | ✅ |
+| **HLS MediaMTX** | `https://cameras.wccosta.com.br/mtx/cameraN_hd/index.m3u8` | ✅ |
+| **WebRTC MediaMTX** | `https://cameras.wccosta.com.br/mtx-whep/cameraN_hd` | ✅ |
+| **API stats SRS** | `https://cameras.wccosta.com.br/api/v1/streams/` | ✅ |
+| **API MediaMTX** | `https://cameras.wccosta.com.br/mtx-api/v3/paths/list` | ✅ |
+| **Métricas MediaMTX** | `http://192.168.50.151:9998/metrics` | ❌ aberto |
 | **RTMP ingest** | `rtmp://192.168.50.151:1935/live/cameraN` | ❌ aberto |
 
 ## Infraestrutura atual
