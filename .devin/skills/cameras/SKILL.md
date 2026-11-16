@@ -34,7 +34,7 @@ allowed-tools:
 ## Painel
 
 - URL: `https://cameras.wccosta.com.br/rtsp.html` — basic auth `admin` (hash bcrypt no `/opt/srs/Caddyfile`)
-- Cert: `/opt/srs/certs/fullchain.pem` — Let's Encrypt, **renovacao MANUAL** (nada de cron/certbot no CT). Ultimo cert expirou em `2026-11-13`
+- Cert: `/opt/srs/certs/fullchain.pem` — Let's Encrypt SAN `wccosta.com.br`, emitido no CT 101 (`ca-server`) via certbot+Azure DNS-01. Renovacao automatica la; **distribuicao** automatica via `/usr/local/sbin/distribuir-cert-wccosta.sh` no host Proxmox (cron seg 04h). Cert atual valido ate `2027-02-04`. Detalhes: skill global `wccosta-cert`
 - Paths sao `runOnDemand`: so ficam `ready` quando alguem abre o stream. `ready:false` na API e normal
 
 ## Comandos uteis
