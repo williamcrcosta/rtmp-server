@@ -1,0 +1,11 @@
+# Servico da app — mesclar no docker-compose.yml principal quando as
+# credenciais do Entra ID estiverem definidas em app/.env
+services:
+  cameras-app:
+    build: ./app
+    container_name: cameras-app
+    restart: unless-stopped
+    env_file: ./app/.env
+    networks:
+      - rtmp-net
+    # sem ports: — acesso so via caddy (reverse_proxy app:8000)
