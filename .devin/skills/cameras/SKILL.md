@@ -79,7 +79,7 @@ Backends escutam **so em 127.0.0.1** no host — a unica entrada e o Caddy (`:44
 |---|---|---|
 | `443` | `0.0.0.0` | Painel HTTPS (caddy) — unica porta de entrada de viewers |
 | `80` | `0.0.0.0` | Redirect → 443 |
-| `1935` | `0.0.0.0` | RTMP ingest (Mibo push) — **sem auth**: qualquer um na LAN pode publicar. Mitigar com VLAN de cameras |
+| `1935` | `0.0.0.0` | RTMP ingest (Mibo push) — **whitelist de IP** via `cameras-rtmp-fw.sh` (ver abaixo) |
 | `8000/udp` | `0.0.0.0` | SRS RTC media |
 | `8189/udp` | `0.0.0.0` | MediaMTX WebRTC media (browsers conectam direto) |
 | `8080` | `127.0.0.1` | SRS HTTP — acesso so via caddy |
@@ -87,7 +87,15 @@ Backends escutam **so em 127.0.0.1** no host — a unica entrada e o Caddy (`:44
 | `8888/8889` | `127.0.0.1` | HLS / WebRTC signaling — via caddy |
 | `9997/9998` | `127.0.0.1` | API / metricas — sem auth, localhost only (endurecido em 2026-11-16) |
 
-Audit (do host, sem credencial): `curl http://192.168.50.151:8080` deve falhar; `https://cameras.wccosta.com.br` deve pedir auth.
+Audit (do host, sem credencial): `curl http://192.168.50.151:8080` deve falhar; `https://cameras.wccosta.com.br` deve pedir auth; conexao em `192.168.50.151:1935` deve dar timeout.
+
+### Whitelist RTMP :1935 (desde 2026-11-16)
+
+- Script: `/usr/local/sbin/cameras-rtmp-fw.sh` (no CT) — IPs permitidos na var `IPS` no topo
+- Unit: `cameras-rtmp-fw.service` (enabled, After=docker) — reaplica no boot
+- Regras em `DOCKER-USER`: ACCEPT por IP de camera → DROP do resto na 1935
+- **Adicionar IP**: editar `IPS` no script + rodar `cameras-rtmp-fw.sh` (ou `systemctl restart cameras-rtmp-fw`)
+- Residual: spoofing de IP de camera (dificil em TCP/LAN); mitigacao futura = VLAN + stream-key
 
 ## Problemas conhecidos (nov/2026)
 
