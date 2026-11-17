@@ -32,11 +32,11 @@ via WebRTC (WHEP), status de saude. Substitui o basicauth do Caddy.
 ## Break-glass (acesso de emergencia)
 
 Conta local que funciona mesmo com o Entra ID fora do ar — usar **somente**
-quando o SSO falhar. Todo uso gera log WARNING ().
+quando o SSO falhar. Todo uso gera log WARNING (`docker logs cameras-app`).
 
-- Endpoint:  (formulario proprio)
-- Conta definida em  no  como 
+- Endpoint: `GET /auth/local` (formulario proprio)
+- Conta definida em `LOCAL_USERS` no `.env` como `user:bcrypt_hash`
 - Gerar hash:
-  
+  `python -c "import bcrypt;print(bcrypt.hashpw(b'SENHA',bcrypt.gensalt()).decode())"`
 - Boas praticas: senha forte unica, guardada offline (cofre), revisar uso
   nos logs periodicamente. Alerta no uso entra na fase de alertas.
