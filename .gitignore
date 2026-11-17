@@ -17,3 +17,9 @@ terraform.tfvars
 *.tfstate.backup
 .terraform.lock.hcl
 mediamtx.env
+
+# app/ e TypeScript/Node — *.ts acima vale so para midia (segmentos MPEG-TS)
+!app/**/*.ts
+!app/.env.example
+node_modules/
+app/.next/
