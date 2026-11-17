@@ -1,7 +1,12 @@
 from authlib.integrations.starlette_client import OAuth
-from fastapi import APIRouter, Request
+import logging
+
+import bcrypt
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 from . import config
+
+log = logging.getLogger("auth")
 
 oauth = OAuth()
 oauth.register(
@@ -46,6 +51,33 @@ async def callback(request: Request):
 async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/auth/login")
+
+
+# ---- break-glass: login local de emergencia (so quando Entra falha) ----
+
+@router.get("/local")
+async def local_form():
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(
+        '<form method="post" action="/auth/local">'
+        '<h3>Acesso de emergencia (break-glass)</h3>'
+        '<input name="u" placeholder="usuario" required>'
+        '<input name="p" type="password" placeholder="senha" required>'
+        '<button>entrar</button></form>')
+
+
+@router.post("/local")
+async def local_login(request: Request, u: str = Form(...), p: str = Form(...)):
+    h = config.local_users().get(u)
+    if not h or not bcrypt.checkpw(p.encode(), h.encode()):
+        log.warning("break-glass FALHOU user=%s ip=%s", u, request.client.host)
+        return RedirectResponse("/auth/local", status_code=303)
+    request.session["user"] = {
+        "name": u, "email": "", "role": "admin", "via": "breakglass",
+    }
+    # TODO fase alertas: notificar todo uso de break-glass (e evento de seguranca)
+    log.warning("break-glass USADO por %s ip=%s", u, request.client.host)
+    return RedirectResponse("/", status_code=303)
 
 
 class NotAuthenticated(Exception):

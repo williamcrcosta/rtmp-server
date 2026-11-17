@@ -16,3 +16,15 @@ CAMERAS = {
     "camera2": "Camera 2",
     "camera3": "Camera 3",
 }
+
+# usuarios break-glass locais (formato: "user:bcrypt_hash user2:hash2")
+# gerar hash: python -c "import bcrypt;print(bcrypt.hashpw(b'senha',bcrypt.gensalt()).decode())"
+LOCAL_USERS_RAW = os.getenv("LOCAL_USERS", "")
+
+def local_users() -> dict[str, str]:
+    out = {}
+    for pair in LOCAL_USERS_RAW.split():
+        if ":" in pair:
+            u, h = pair.split(":", 1)
+            out[u] = h
+    return out

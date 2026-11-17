@@ -28,3 +28,15 @@ via WebRTC (WHEP), status de saude. Substitui o basicauth do Caddy.
 - Streams so via WHEP (mediamtx:8889 fica em localhost — a app e o proxy)
 - Mediamtx API (9997) consultada server-side pra status das paths
 - Sem persistencia: sessoes sao cookies assinados; historico de quedas = fase 2
+
+## Break-glass (acesso de emergencia)
+
+Conta local que funciona mesmo com o Entra ID fora do ar — usar **somente**
+quando o SSO falhar. Todo uso gera log WARNING ().
+
+- Endpoint:  (formulario proprio)
+- Conta definida em  no  como 
+- Gerar hash:
+  
+- Boas praticas: senha forte unica, guardada offline (cofre), revisar uso
+  nos logs periodicamente. Alerta no uso entra na fase de alertas.
