@@ -1,42 +1,29 @@
 # cameras-app
 
-Painel proprio das cameras: login via Entra ID (AD sync), grid ao vivo
-via WebRTC (WHEP), status de saude. Substitui o basicauth do Caddy.
+Painel proprio das cameras — **Next.js 15 + React 19 + TypeScript + Auth.js v5**.
 
-## Estrutura
-
-- `app/` — FastAPI (auth OIDC, proxy WHEP, API de status)
-- `templates/` — pagina do grid
-- `static/` — `whep.js` (player) + css
-- `docker-compose.app.yml` — servico pra mesclar no compose principal
+- Login federado **Entra ID** (contas do AD sincronizadas) + grupo→papel
+- **Break-glass** local (`LOCAL_USERS` com bcrypt) pra quando o SSO cair
+- Grid ao vivo via **WebRTC/WHEP** (proxy server-side; mediamtx fica invisivel)
+- Status de saude por camera (API do mediamtx server-side)
 
 ## Setup
 
-1. Copie `.env.example` → `.env` e preencha:
-   - `OIDC_*` — App Registration no Entra ID
-     (redirect URI: `https://cameras.wccosta.com.br/auth/callback`)
-   - `ADMIN_GROUP_ID` / `VIEWER_GROUP_ID` — object IDs dos grupos no AD
-   - `SESSION_SECRET` — string aleatoria longa
-2. No App Registration, habilite o claim `groups` no token
-   (Token configuration → Add groups claim → Security groups)
-3. No compose principal, adicione o servico `cameras-app` e no Caddyfile
-   aponte `reverse_proxy cameras-app:8000` no lugar do basicauth
-4. `docker compose up -d`
+1. `cp .env.example .env` e preencha:
+   - `AUTH_SECRET` — `openssl rand -base64 32`
+   - `AUTH_MICROSOFT_ENTRA_ID_*` — App Registration
+     (redirect: `https://cameras.wccosta.com.br/api/auth/callback/microsoft-entra-id`)
+   - `ADMIN_GROUP_ID` — object ID do grupo admin no AD
+   - `LOCAL_USERS` — `user:bcrypt_hash` (break-glass)
+2. No App Registration: **Token configuration → groups claim → Security groups**
+3. Mesclar `docker-compose.app.yml` no compose principal e no Caddyfile
+   trocar o basicauth por `reverse_proxy cameras-app:3000`
+4. `docker compose up -d --build`
 
-## Notas
+## Estrutura
 
-- Streams so via WHEP (mediamtx:8889 fica em localhost — a app e o proxy)
-- Mediamtx API (9997) consultada server-side pra status das paths
-- Sem persistencia: sessoes sao cookies assinados; historico de quedas = fase 2
-
-## Break-glass (acesso de emergencia)
-
-Conta local que funciona mesmo com o Entra ID fora do ar — usar **somente**
-quando o SSO falhar. Todo uso gera log WARNING (`docker logs cameras-app`).
-
-- Endpoint: `GET /auth/local` (formulario proprio)
-- Conta definida em `LOCAL_USERS` no `.env` como `user:bcrypt_hash`
-- Gerar hash:
-  `python -c "import bcrypt;print(bcrypt.hashpw(b'SENHA',bcrypt.gensalt()).decode())"`
-- Boas praticas: senha forte unica, guardada offline (cofre), revisar uso
-  nos logs periodicamente. Alerta no uso entra na fase de alertas.
+- `src/auth.ts` — Auth.js: Entra ID + Credentials break-glass + role por grupo
+- `src/middleware.ts` — protege todas as rotas (exceto auth/login)
+- `src/app/api/status` — status das cameras (mediamtx server-side)
+- `src/app/api/whep/[path]` — proxy WHEP (offer/answer + sessao)
+- `src/app/components/CameraGrid.tsx` — grid client-side com player WHEP
