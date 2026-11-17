@@ -15,3 +15,16 @@ video { width: 100%; aspect-ratio: 16/9; background: #000; display: block; }
 .card button, .card input { padding: 10px; border-radius: 6px; border: 1px solid #444;
   background: #222; color: #eee; }
 .card button { cursor: pointer; background: #246; }
+
+.stats-bar { display: flex; gap: 24px; padding: 10px 20px; background: #161616;
+  border-bottom: 1px solid #2a2a2a; font-size: .85rem; color: #aaa; }
+.stats-bar b { color: #eee; }
+.cam-metrics { display: flex; gap: 16px; padding: 6px 12px; font-size: .78rem;
+  color: #999; background: #141414; }
+.spark { width: 100%; height: 30px; display: block; background: #101010; }
+.btn-max { background: none; border: none; color: #888; cursor: pointer;
+  font-size: .95rem; padding: 0 4px; }
+.btn-max:hover { color: #eee; }
+.cam:fullscreen { border-radius: 0; }
+.cam:fullscreen video { height: calc(100% - 90px); aspect-ratio: auto;
+  object-fit: contain; }
