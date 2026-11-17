@@ -71,6 +71,24 @@ pct exec 201 -- bash -c "mkdir -p /var/records && cd /opt/srs && docker compose 
 3. **MAC diferente respondendo o mesmo IP** = conflito de IP — identificar o intruso pelo OUI
 4. Script monitor pronto no CT: `/root/monitor-cam3.sh` (ping/arping a cada 5s, loga ONLINE/OFFLINE com MAC em `/root/cam3-monitor.log`) — adaptar o IP para reuso
 
+## Superficie de rede (modelo de seguranca)
+
+Backends escutam **so em 127.0.0.1** no host — a unica entrada e o Caddy (`:443`, basicauth):
+
+| Porta | Bind | Funcao |
+|---|---|---|
+| `443` | `0.0.0.0` | Painel HTTPS (caddy) — unica porta de entrada de viewers |
+| `80` | `0.0.0.0` | Redirect → 443 |
+| `1935` | `0.0.0.0` | RTMP ingest (Mibo push) — **sem auth**: qualquer um na LAN pode publicar. Mitigar com VLAN de cameras |
+| `8000/udp` | `0.0.0.0` | SRS RTC media |
+| `8189/udp` | `0.0.0.0` | MediaMTX WebRTC media (browsers conectam direto) |
+| `8080` | `127.0.0.1` | SRS HTTP — acesso so via caddy |
+| `8554` | `127.0.0.1` | RTSP out — acesso so via caddy |
+| `8888/8889` | `127.0.0.1` | HLS / WebRTC signaling — via caddy |
+| `9997/9998` | `127.0.0.1` | API / metricas — sem auth, localhost only (endurecido em 2026-11-16) |
+
+Audit (do host, sem credencial): `curl http://192.168.50.151:8080` deve falhar; `https://cameras.wccosta.com.br` deve pedir auth.
+
 ## Problemas conhecidos (nov/2026)
 
 - **camera3**: defeito de hardware — boot loop / quedas L2 em WiFi **e** cabo, mesmo com fonte/cabo/porta novos e resets. Levada a assistencia. Log de evidencia: `/root/cam3-monitor.log` no CT
