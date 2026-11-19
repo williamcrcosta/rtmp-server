@@ -128,6 +128,10 @@ ansible-playbook -i ansible/inventory.ini ansible/playbook.yml \
 └── README.md
 ```
 
+## Prioridades da revisão
+
+Consulte a [lista de ações por prioridade](docs/prioridades.md) para acompanhar os riscos críticos, a homologação do painel Next.js e as melhorias planejadas.
+
 ## Segurança
 
 Nunca versionar:
